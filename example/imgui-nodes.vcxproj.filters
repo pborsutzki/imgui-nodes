@@ -1,0 +1,89 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="imgui">
+      <UniqueIdentifier>{43328118-bacd-49f9-af81-752480b4af80}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cubicSpline">
+      <UniqueIdentifier>{bdbaa819-b488-4f99-ab22-cf56b8957011}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="gl3w">
+      <UniqueIdentifier>{8c7a9783-dc4c-4b6a-a4de-2a9883925ee1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="glfw3_gl3">
+      <UniqueIdentifier>{e17b0eb9-8fd0-4389-b65b-5adb557e68c9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="example">
+      <UniqueIdentifier>{6dc60a37-7141-4091-a1a7-13818a472f8c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="imgui-nodes">
+      <UniqueIdentifier>{846ca5d1-141c-4907-b787-1c1e71625228}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="imgui_nodes_example.cpp">
+      <Filter>example</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>example</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui_nodes.cpp">
+      <Filter>imgui-nodes</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui\imgui.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui\imgui_demo.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui\imgui_draw.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui\examples\opengl3_example\imgui_impl_glfw_gl3.cpp">
+      <Filter>glfw3_gl3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui\examples\libs\gl3w\GL\gl3w.c">
+      <Filter>gl3w</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cubicSpline\CubicSpline.cpp">
+      <Filter>cubicSpline</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\imgui_nodes.hpp">
+      <Filter>imgui-nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui\imconfig.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui\imgui.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui\imgui_internal.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui\examples\opengl3_example\imgui_impl_glfw_gl3.h">
+      <Filter>glfw3_gl3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui\examples\libs\gl3w\GL\gl3w.h">
+      <Filter>gl3w</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui\examples\libs\gl3w\GL\glcorearb.h">
+      <Filter>gl3w</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cubicSpline\CubicSpline.h">
+      <Filter>cubicSpline</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cubicSpline\CubicSplineHelpers.h">
+      <Filter>cubicSpline</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\cubicSpline\CubicSplineHelpers.inl">
+      <Filter>cubicSpline</Filter>
+    </None>
+    <None Include="..\cubicSpline\CubicSplineSimd.inl">
+      <Filter>cubicSpline</Filter>
+    </None>
+  </ItemGroup>
+</Project>
