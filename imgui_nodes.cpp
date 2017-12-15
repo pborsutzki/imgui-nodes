@@ -6,21 +6,20 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 #endif // IMGUI_DEFINE_MATH_OPERATORS
 
-//#define IMGUI_ANTIALIASFRINGESCALE
-
 #include <imgui_internal.h>
 
+#include <CubicSpline.h>
+
 #include <math.h>
-
 #include <vector>
-#include <array>
 #include <algorithm>
+#include <array>
 
-#include "cubicSpline/CubicSpline.h"
-
+#ifdef IMGUI_NODES_DEBUG
 #include <sstream>
 
 std::stringstream debug;
+#endif
 
 namespace nodes {
 
@@ -334,11 +333,6 @@ void copyTransformDrawCmds(ImDrawData* sourceDrawData, ImVec2 scale, ImVec2 tran
     targetDrawList->AddDrawCmd();
 }
 
-void switchCurrentDrawList(ImDrawList *newList) {
-    ImGuiWindow* wnd = ImGui::GetCurrentWindow();
-    wnd->DrawList = newList;
-}
-
 bool WasItemActive()
 {
     ImGuiContext& g = *GImGui;
@@ -441,8 +435,10 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, boo
         state.innerContext->Style = state.outerContext->Style;
     }
 
+#ifdef IMGUI_NODES_DEBUG
     debug.str("");
     debug.clear();
+#endif
 
     ImVec2 windowSize = ImGui::GetWindowSize() / state.zoom;
     ImVec2 windowPos = ImGui::GetWindowPos();
@@ -484,15 +480,24 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, boo
         outerIo, windowSize, windowPos, state.outerWindowFocused, state.outerWindowHovered);
 
     ImGui::NewFrame();
+#ifdef IMGUI_NODES_DEBUG
     debug << "BeginNodeArea " << ImGui::IsAnyItemActive() << std::endl;
-
-#ifdef IMGUI_ANTIALIASFRINGESCALE
-    ImGui::PushStyleVar(ImGuiStyleVar_AntiAliasFringeScale, state.innerContext->Style.AntiAliasFringeScale / state.zoom);
 #endif
+
+    ImGui::PushStyleVar(ImGuiStyleVar_AntiAliasFringeScale, state.innerContext->Style.AntiAliasFringeScale / state.zoom);
     ImGui::SetNextWindowPos(state.innerWndPos, setWindowPos ? ImGuiSetCond_Always : ImGuiSetCond_Once);
     ImGui::SetNextWindowSize(state.nodeAreaSize);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4());
-    ImGui::Begin("node_graph", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar);
+    int wndFlags =
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoScrollbar |
+        ImGuiWindowFlags_NoScrollWithMouse |
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoFocusOnAppearing |
+        ImGuiWindowFlags_NoBringToFrontOnFocus;
+    ImGui::Begin("node_graph", nullptr, wndFlags);
 
     // Avoids early clipping when zoomed in
     ImGui::PushClipRect(ImVec2(-1.f, -1.f), ImVec2(windowSize) + ImVec2(1.f, 1.f), false);
@@ -564,8 +569,7 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, boo
             {
                 actionCallback(UserAction::NewConnection);
                 state.mode = Mode::None;
-            } 
-            else if (ImGui::IsMouseReleased(0) || ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Escape)))
+            } else if (ImGui::IsMouseReleased(0) || ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Escape)))
             {
                 state.mode = Mode::None;
             }
@@ -576,7 +580,7 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, boo
 
             ImGuiIO const& io = ImGui::GetIO();
             // from imgui.cpp
-            const bool is_shortcut_key_only = (io.OptMacOSXBehaviors ? (io.KeySuper && !io.KeyCtrl) : (io.KeyCtrl && !io.KeySuper)) && !io.KeyAlt && !io.KeyShift; // OS X style: Shortcuts using Cmd/Super instead of Ctrl
+            const bool is_shortcut_key_only = (io.KeyCtrl && !io.KeySuper) && !io.KeyAlt && !io.KeyShift;
 
             if (is_shortcut_key_only) {
                 if (IsKeyPressedMap(ImGuiKey_X)) {
@@ -615,23 +619,21 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, boo
         state.connectorEndSlot = -1;
     }
 
-    ImGuiWindow* wnd = ImGui::GetCurrentWindow();
-    state.windowDrawList = wnd->DrawList;
-    state.nodeDrawList.Clear();
-    state.nodeDrawList.PushClipRect(state.windowDrawList->GetClipRectMin(), state.windowDrawList->GetClipRectMax());
-    state.nodeDrawList.PushTextureID(state.windowDrawList->_TextureIdStack.back());
-
-    state.overlayDrawList.Clear();
-    state.overlayDrawList.PushClipRect(state.windowDrawList->GetClipRectMin(), state.windowDrawList->GetClipRectMax());
-    state.overlayDrawList.PushTextureID(state.windowDrawList->_TextureIdStack.back());
-
-    debug << "BeginNodeArea " << ImGui::IsAnyItemActive() << " scrolling " << state.scrolling << std::endl;
+#ifdef IMGUI_NODES_DEBUG
+    debug 
+        << "BeginNodeArea " << ImGui::IsAnyItemActive() 
+        << " scrolling " << state.scrolling 
+        << " mpos: " << ImGui::GetMousePos().x << ", " << ImGui::GetMousePos().y 
+        << " abs " << (ImGui::GetWindowPos() + ImGui::GetMousePos()).x << ", " << (ImGui::GetWindowPos() + ImGui::GetMousePos()).y
+        << " hovered " << ImGui::IsWindowHovered()
+        << std::endl;
+#endif
 }
 
 void NodeArea::EndNodeArea() {
+#ifdef IMGUI_NODES_DEBUG
     debug << "EndNodeArea " << ImGui::IsAnyItemActive() << std::endl;
-    copyTransformDrawList(state.windowDrawList, &state.nodeDrawList);
-    copyTransformDrawList(state.windowDrawList, &state.overlayDrawList);
+#endif
 
     switch (state.mode)
     {
@@ -683,9 +685,7 @@ void NodeArea::EndNodeArea() {
     ImGui::PopClipRect();
     ImGui::End();
     ImGui::PopStyleColor();
-#ifdef IMGUI_ANTIALIASFRINGESCALE
     ImGui::PopStyleVar();
-#endif
     ImGui::Render();
     ImDrawData* innerDrawData = ImGui::GetDrawData();
     IM_ASSERT(innerDrawData->Valid);
@@ -704,112 +704,149 @@ void NodeArea::EndNodeArea() {
 
     copyTransformDrawCmds(innerDrawData, scale, translate);
 
+#ifdef IMGUI_NODES_DEBUG
     debug << "active node " << state.activeNode << std::endl;
 
     ImGui::SetCursorPos(ImVec2(10.f, 5.f));
     ImGui::Text("x %.2f, y %.2f\nz %.2f\n%s", state.innerWndPos.x, state.innerWndPos.y, state.zoom, debug.str().c_str());
+#endif
 }
 
 bool NodeArea::BeginNode(NodeState &node) {
+    node.skip = false;
+
+    if (!node.forceRedraw) {
+        ImVec2 origin = state.innerWndPos + node.pos;
+        ImVec2 originAndSize = origin + node.size + style.nodePadding * 2.f + style.slotRadius * 2.f;
+        ImRect clip(origin, originAndSize);
+
+        ImDrawList* draw_list = ImGui::GetWindowDrawList();
+        ImVec4 windowClipRect = draw_list->_ClipRectStack[draw_list->_ClipRectStack.size() - 1];
+
+        node.skip = !clip.Overlaps(windowClipRect);
+    }
+
+    // put nodes into a separate child window so we can paint them on top 
+    // of connectors
+    char buf[64];
+    sprintf_s(buf, "##node%d", node.id);
+    ImGui::SetNextWindowPos(state.innerWndPos + node.pos);
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.nodePadding + style.slotRadius);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
+
+    ImGui::Begin(buf, nullptr, ImVec2(150, -1), -1.f, /*ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_ShowBorders | */ ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
+
     ImGui::PushID(&node);
+
+    if (node.skip && !node.forceRedraw) {
+        return false;
+    }
+    node.forceRedraw = false;
+
 
     node.inputSlots.resize(0);
     node.outputSlots.resize(0);
 
+    bool hovered = state.hoveredNode == node.id;
     bool selected = state.selectedNodes.isSelected(node.id);
+    bool wouldSelect = handleNodeDragSelection(*this, node.id, ImRect(node.pos, node.pos + node.size));
 
-    // put nodes into a separate draw list so we can paint them on top 
-    // of connectors
-    if (selected) {
-        switchCurrentDrawList(&state.overlayDrawList);
-    } else {
-        switchCurrentDrawList(&state.nodeDrawList);
-    }
+    ImU32 nodeBg = hovered ? style.nodeFillHovered : style.nodeFill;
+    ImU32 nodeBorder = (selected || wouldSelect) ? style.nodeBorderSelected : style.nodeBorder;
+
+    ImVec2 offset = ImGui::GetWindowPos() + style.slotRadius;
 
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    draw_list->ChannelsSplit(3);
-    draw_list->ChannelsSetCurrent(2);
+    draw_list->PushClipRect(state.innerWndPos + node.pos, state.innerWndPos + node.pos + ImGui::GetWindowSize());
 
-    ImGui::PushItemWidth(150.f);
-    ImGui::SetCursorPos(node.pos + style.nodePadding);
+    draw_list->AddRectFilled(offset, offset + node.size, nodeBg, style.nodeRounding);
+    draw_list->AddRect(offset, offset + node.size, nodeBorder, style.nodeRounding, -1, style.nodeBorderSize);
+
+    draw_list->PopClipRect();
+
+    ImGui::SetCursorPos(ImVec2(0.f, 0.f) + style.slotRadius + style.nodePadding);
+
     ImGui::BeginGroup(); // Lock horizontal position
 
+#ifdef IMGUI_NODES_DEBUG
     debug << "BeginNode " << node.id << " " << ImGui::IsAnyItemActive() << std::endl;
+#endif
     return true;
 }
 
 void NodeArea::EndNode(NodeState &node, bool resizable) {
-    debug << "EndNode " << node.id << " " << ImGui::IsAnyItemActive() << std::endl;
-    ImGui::EndGroup();
-    ImGui::PopItemWidth();
+    bool hovered = false;
+    bool selected = false;
+    if (!node.skip) {
+#ifdef IMGUI_NODES_DEBUG
+        debug << "EndNode " << node.id << " " << ImGui::IsAnyItemActive() << std::endl;
+#endif
 
-    ImVec2 offset = ImGui::GetWindowPos();
+        ImGui::EndGroup();
 
-    if (!resizable || node.size.x < 0.f) {
-        node.size = ImGui::GetItemRectSize() + style.nodePadding * 2.f;
-    }
+        ImVec2 offset = ImGui::GetWindowPos() + style.slotRadius;
 
-    const float window_rounding = style.nodeRounding;
-    const float resize_corner_size = ImMax(state.innerContext->FontSize * 1.35f, window_rounding + 1.0f + state.innerContext->FontSize * 0.2f);
-    const ImVec2 br = offset + node.pos + node.size;
-    ImU32 resize_col = 0;
-    if (resizable)
-    {
-        const ImRect resize_rect(br - ImFloor(ImVec2(resize_corner_size * 0.75f, resize_corner_size * 0.75f)), br);
-        const ImGuiID resize_id = ImGui::GetID(&node);
-        bool resizeHovered, resizeHeld;
-        ImGui::ButtonBehavior(resize_rect, resize_id, &resizeHovered, &resizeHeld, ImGuiButtonFlags_FlattenChilds);
-        resize_col = ImGui::GetColorU32(resizeHeld ? ImGuiCol_ResizeGripActive : resizeHovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
-
-        if (resizeHeld && (state.mode == Mode::None || state.mode == Mode::ResizingNode)) {
-            state.mode = Mode::ResizingNode;
-            node.size += ImGui::GetIO().MouseDelta;
-        } else if (!resizeHeld && state.mode == Mode::ResizingNode) {
-            state.mode = Mode::None;
+        if (!resizable || node.size.x < 0.f) {
+            //node.size = ImGui::GetWindowContentRegionMax() - ImGui::GetWindowContentRegionMin() + style.nodePadding * 2.f; //ImGui::GetItemRectSize() + style.nodePadding * 2.f;
+            //node.size = ImGui::GetItemRectSize() + style.nodePadding * 2.f;
+            //ImGui::SetWindowSize(node.size + style.slotRadius * 2.f);
+            node.size = ImGui::GetWindowSize() - style.slotRadius * 2.f;
         }
-    }
 
-    ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    draw_list->ChannelsSetCurrent(0);
+        const float window_rounding = style.nodeRounding;
+        const float resize_corner_size = ImMax(state.innerContext->FontSize * 1.35f, window_rounding + 1.0f + state.innerContext->FontSize * 0.2f);
+        const ImVec2 br = offset + node.size;
+        ImU32 resize_col = 0;
+        if (resizable)
+        {
+            const ImRect resize_rect(br - ImFloor(ImVec2(resize_corner_size * 0.75f, resize_corner_size * 0.75f)), br);
+            const ImGuiID resize_id = ImGui::GetID(&node);
+            bool resizeHovered, resizeHeld;
+            ImGui::ButtonBehavior(resize_rect, resize_id, &resizeHovered, &resizeHeld, ImGuiButtonFlags_FlattenChilds);
+            resize_col = ImGui::GetColorU32(resizeHeld ? ImGuiCol_ResizeGripActive : resizeHovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
 
-    ImGui::SetCursorPos(node.pos);
-    ImGui::InvisibleButton("node", node.size);
-    bool itemActive = state.outerWindowFocused && ImGui::IsItemActive();
-    bool itemWasActive = state.outerWindowFocused && WasItemActive();
-    ImU32 nodeBg = style.nodeFill;
-    ImU32 nodeBorder = style.nodeBorder;
-    bool hovered = state.outerWindowHovered && ImGui::IsItemHovered();
+            if (resizeHeld && (state.mode == Mode::None || state.mode == Mode::ResizingNode)) {
+                state.mode = Mode::ResizingNode;
+                node.size += ImGui::GetIO().MouseDelta;
+            } else if (!resizeHeld && state.mode == Mode::ResizingNode) {
+                state.mode = Mode::None;
+            }
+        }
 
-    if (state.mode == Mode::SelectAll) {
-        state.selectedNodes.addToSelection(node.id);
-    }
+        ImGui::SetCursorPos(ImVec2(0.f, 0.f) + style.slotRadius);
+        ImGui::InvisibleButton("node", node.size);
+        bool itemActive = state.outerWindowFocused && ImGui::IsItemActive();
+        bool itemWasActive = state.outerWindowFocused && WasItemActive();
+#ifdef IMGUI_NODES_DEBUG
+        debug << "active: " << itemActive << " was active: " << itemWasActive << std::endl;
+#endif
+        hovered = state.outerWindowHovered && ImGui::IsItemHovered();
 
-    if (itemWasActive && ImGui::IsMouseReleased(0) && state.mode == Mode::None)
-    {
-        if (ImGui::GetIO().KeyShift) {
-            state.selectedNodes.toggleSelection(node.id);
-        } else {
-            // Allows selection of nodes with a simple click.
-            // Clears other selections.
-            clearAllSelections();
+        if (state.mode == Mode::SelectAll) {
             state.selectedNodes.addToSelection(node.id);
         }
+
+        if (itemWasActive && ImGui::IsMouseReleased(0) && state.mode == Mode::None)
+        {
+            if (ImGui::GetIO().KeyShift) {
+                state.selectedNodes.toggleSelection(node.id);
+            } else {
+                // Allows selection of nodes with a simple click.
+                // Clears other selections.
+                clearAllSelections();
+                state.selectedNodes.addToSelection(node.id);
+            }
+        }
+        if (itemActive) {
+            state.activeNode = node.id;
+        }
+        if (hovered) {
+            state.hoveredNode = node.id;
+        }
     }
-    if (itemActive) {
-        state.activeNode = node.id;
-    }
-    if (hovered) {
-        state.hoveredNode = node.id;
-        nodeBg = style.nodeFillHovered;
-    }
-    bool selected = state.selectedNodes.isSelected(node.id);
-    bool wouldSelect = handleNodeDragSelection(*this, node.id, ImRect(node.pos, node.pos + node.size));
-    if (selected || wouldSelect)
-    {
-        nodeBorder = style.nodeBorderSelected;
-    }
-    draw_list->AddRectFilled(offset + node.pos, offset + node.pos + node.size, nodeBg, style.nodeRounding);
-    draw_list->AddRect(offset + node.pos, offset + node.pos + node.size, nodeBorder, style.nodeRounding, -1, style.nodeBorderSize);
+    selected = state.selectedNodes.isSelected(node.id);
 
     bool canMove = selected || hovered;
     if (state.mode == Mode::DraggingNodes && canMove && ImGui::GetIO().MouseDelta != ImVec2()) {
@@ -822,45 +859,44 @@ void NodeArea::EndNode(NodeState &node, bool resizable) {
                 floor(node.posFloat.y / state.snapGrid) * state.snapGrid
             );
         }
+        node.forceRedraw = true;
     } else if (state.mode == Mode::None) {
         node.posFloat = node.pos;
     }
-
-    if (resizable) {
-        draw_list->PathLineTo(br + ImVec2(-resize_corner_size, -style.nodeBorderSize));
-        draw_list->PathLineTo(br + ImVec2(-style.nodeBorderSize, -resize_corner_size));
-        draw_list->PathArcToFast(ImVec2(br.x - window_rounding - style.nodeBorderSize, br.y - window_rounding - style.nodeBorderSize), window_rounding, 0, 3);
-        draw_list->PathFillConvex(resize_col);
-    }
-
-    draw_list->ChannelsMerge();
-
-    IM_ASSERT(ImGui::GetWindowDrawList() == &state.nodeDrawList || 
-        ImGui::GetWindowDrawList() == &state.overlayDrawList);
-    switchCurrentDrawList(state.windowDrawList);
     ImGui::PopID();
+    ImGui::End();
+    ImGui::PopStyleVar(3);
 }
 
 void NodeArea::BeginSlot(NodeState &node) {
     ImVec2 offset = ImGui::GetWindowPos();
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    draw_list->ChannelsSetCurrent(1);
+    draw_list->PushClipRect(state.innerWndPos + node.pos, state.innerWndPos + node.pos + ImGui::GetWindowSize());
     node.lastCursor = ImGui::GetCursorPos();
-    ImVec2 pos = ImVec2(node.pos.x, node.lastCursor.y);
-    draw_list->AddLine(offset + pos, offset + pos + ImVec2(node.size.x, 0), ImColor(100, 100, 100), 1.5f);
-    draw_list->ChannelsSetCurrent(2);
+    ImVec2 pos = ImVec2(style.slotRadius, node.lastCursor.y);
+    draw_list->AddLine(offset + pos + ImVec2(style.nodeBorderSize, 0.f), offset + pos + ImVec2(node.size.x - style.nodeBorderSize, 0), style.slotSeparatorColor, style.slotSeparatorSize);
+    draw_list->PopClipRect();
     ImGui::Spacing();
 }
 
 void NodeArea::EndSlot(NodeState &node, int inputType, int outputType) {
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    draw_list->PushClipRect(state.innerWndPos + node.pos, state.innerWndPos + node.pos + ImGui::GetWindowSize());
 
-    ImVec2 inputPos = ImVec2(node.pos.x, node.lastCursor.y + (ImGui::GetCursorPos().y - node.lastCursor.y) / 2.f);
-    ImVec2 outputPos = inputPos + ImVec2(node.size.x, 0);
+    ImVec2 relativeInputPos = ImVec2(style.slotRadius, node.lastCursor.y + (ImGui::GetCursorPos().y - node.lastCursor.y) / 2.f);
+    ImVec2 relativeOutputPos = relativeInputPos + ImVec2(node.size.x, 0);
+
+    ImVec2 absoluteInputPos = relativeInputPos + node.pos;
+    ImVec2 absoluteOutputPos = relativeOutputPos + node.pos;
     
     ImVec2 offset = ImGui::GetWindowPos();
 
-    auto paintConnectorDock = [&](ImVec2 pos, ImColor col, bool input, int slotIdx) {
+    auto paintConnectorDock = [&](ImVec2 pos, ImColor col, bool input, int slotIdx, ImVec2 dragPos) {
+#ifdef IMGUI_NODES_DEBUG
+        debug
+            << " connector " << (input ? "input " : "output ") << slotIdx << " pos: "
+            << pos.x << ", " << pos.y << std::endl;
+#endif
         draw_list->AddCircleFilled(offset + pos, style.slotRadius, col);
 
         bool hovered = 
@@ -871,7 +907,7 @@ void NodeArea::EndSlot(NodeState &node, int inputType, int outputType) {
             Mode mode = input ? Mode::DraggingConnectorInput : Mode::DraggingConnectorOutput;
             if (ImGui::IsMouseDown(0) && !ImGui::IsMouseDragging(0, 1.f) && state.mode == Mode::None) {
                 state.mode = mode;
-                state.dragStart = state.dragEnd = pos;
+                state.dragStart = state.dragEnd = dragPos;
                 state.connectorStartNode = node.id;
                 state.connectorStartSlot = slotIdx;
             } else {
@@ -889,14 +925,15 @@ void NodeArea::EndSlot(NodeState &node, int inputType, int outputType) {
     };
 
     if (inputType != -1) {
-        node.inputSlots.push_back({ inputType, inputPos });
-        paintConnectorDock(inputPos, style.connectorTypeColor.at(inputType), false, (int)node.inputSlots.size() - 1);
+        node.inputSlots.push_back({ inputType, absoluteInputPos });
+        paintConnectorDock(relativeInputPos, style.connectorTypeColor.at(inputType), false, (int)node.inputSlots.size() - 1, absoluteInputPos);
     }
     if (outputType != -1) {
-        node.outputSlots.push_back({ outputType, outputPos });
-        paintConnectorDock(outputPos, style.connectorTypeColor.at(outputType), true, (int)node.outputSlots.size() - 1);
+        node.outputSlots.push_back({ outputType, absoluteOutputPos });
+        paintConnectorDock(relativeOutputPos, style.connectorTypeColor.at(outputType), true, (int)node.outputSlots.size() - 1, absoluteOutputPos);
     }
 
+    draw_list->PopClipRect();
     node.lastCursor = ImGui::GetCursorPos();
 }
 
@@ -969,6 +1006,23 @@ bool NodeArea::GetNewConnection(int *connectorSourceNode, int *connectorSourceNo
     return false;
 }
 
+#ifdef IMGUI_NODES_DEBUG
+void NodeArea::ShowMetricsWindow(bool* p_open /*= nullptr*/)
+{
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, state.outerContext->Style.WindowBorderSize);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, state.outerContext->Style.Colors[ImGuiCol_WindowBg]);
+    ImGui::ShowMetricsWindow(p_open);
+    ImGui::PopStyleColor(1);
+    ImGui::PopStyleVar(1);
+
+}
+
+std::stringstream& NodeArea::Debug()
+{
+    return debug;
+}
+#endif
+
 void Style::generate()
 {
     ImGuiStyle const& style = ImGui::GetStyle();
@@ -992,6 +1046,7 @@ void Style::generate()
     slotRadius = 4.f;
     slotMouseRadius = 6.f;
     slotBorderHovered = ImColor(255, 128, 0);
+    slotSeparatorColor = style.Colors[ImGuiCol_Separator];
 
     grid = {
         Grid{ 64, 1.f, ImColor(150, 150, 150, 200) },
@@ -1005,6 +1060,8 @@ NodeState::NodeState(int id, ImVec2 initialPos)
     , pos(initialPos)
     , posFloat(initialPos)
     , size(-1.f, -1.f)
+    , skip(false)
+    , forceRedraw(true)
 {}
 
 } // namespace nodes

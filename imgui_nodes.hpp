@@ -28,6 +28,8 @@ struct NodeState {
     ImVec2 size;
 
     ImVec2 lastCursor;
+    bool skip;
+    bool forceRedraw;
 
     std::vector<SlotState> inputSlots;
     std::vector<SlotState> outputSlots;
@@ -62,6 +64,8 @@ struct Style {
     float   slotRadius;
     float   slotMouseRadius;
     ImColor slotBorderHovered;
+    ImColor slotSeparatorColor;
+    float   slotSeparatorSize;
 
     std::vector<ImColor> connectorTypeColor;
 
@@ -89,6 +93,8 @@ struct Style {
         , slotRadius(4.f)
         , slotMouseRadius(10.f)
         , slotBorderHovered(255, 128, 0)
+        , slotSeparatorColor(100, 100, 100)
+        , slotSeparatorSize(1.5f)
         , connectorTypeColor({
             ImColor(150, 150, 250, 150),
             ImColor(250, 150, 250, 150),
@@ -155,10 +161,6 @@ struct NodeArea {
 
         bool outerWindowFocused;
         bool outerWindowHovered;
-
-        ImDrawList nodeDrawList;
-        ImDrawList overlayDrawList;
-        ImDrawList *windowDrawList;
     } state;
 
     Style style;
@@ -180,6 +182,11 @@ struct NodeArea {
     bool ConnectNodeSlots(int connectorId, NodeState &sourceNode, int sourceSlot, NodeState &sinkNode, int sinkSlot);
 
     bool GetNewConnection(int *connectorSourceNode, int *connectorSourceNodeSlot, int *connectorSinkNode, int *connectorSinkNodeSlot);
+
+#ifdef IMGUI_NODES_DEBUG
+    void ShowMetricsWindow(bool* p_open = nullptr);
+    std::stringstream& Debug();
+#endif
 };
 
 static_assert(std::is_default_constructible<NodeArea>::value, "");
