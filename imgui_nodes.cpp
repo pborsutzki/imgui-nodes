@@ -6,6 +6,8 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 #endif // IMGUI_DEFINE_MATH_OPERATORS
 
+//#define IMGUI_ANTIALIASFRINGESCALE
+
 #include <imgui_internal.h>
 
 #include <CubicSpline.h>
@@ -483,8 +485,9 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, boo
 #ifdef IMGUI_NODES_DEBUG
     debug << "BeginNodeArea " << ImGui::IsAnyItemActive() << std::endl;
 #endif
-
+#ifdef IMGUI_ANTIALIASFRINGESCALE
     ImGui::PushStyleVar(ImGuiStyleVar_AntiAliasFringeScale, state.innerContext->Style.AntiAliasFringeScale / state.zoom);
+#endif
     ImGui::SetNextWindowPos(state.innerWndPos, setWindowPos ? ImGuiSetCond_Always : ImGuiSetCond_Once);
     ImGui::SetNextWindowSize(state.nodeAreaSize);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4());
@@ -685,7 +688,9 @@ void NodeArea::EndNodeArea() {
     ImGui::PopClipRect();
     ImGui::End();
     ImGui::PopStyleColor();
+#ifdef IMGUI_ANTIALIASFRINGESCALE
     ImGui::PopStyleVar();
+#endif
     ImGui::Render();
     ImDrawData* innerDrawData = ImGui::GetDrawData();
     IM_ASSERT(innerDrawData->Valid);
@@ -734,9 +739,9 @@ bool NodeArea::BeginNode(NodeState &node) {
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.nodePadding + style.slotRadius);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.f);
 
-    ImGui::Begin(buf, nullptr, ImVec2(150, -1), -1.f, /*ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_ShowBorders | */ ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
+    ImGui::Begin(buf, nullptr, ImVec2(150, -1), -1.f, ImGuiWindowFlags_AlwaysAutoResize /*| ImGuiWindowFlags_ShowBorders */| ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
 
     ImGui::PushID(&node);
 

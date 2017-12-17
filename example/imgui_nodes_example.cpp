@@ -1,6 +1,6 @@
 #include <imgui.h>
 
-#include "../imgui_nodes.hpp"
+#include <imgui_nodes.hpp>
 
 #include <vector>
 #include <algorithm>
