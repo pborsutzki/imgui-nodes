@@ -9,29 +9,31 @@ It tries to use ImGui paradigmas where possible by keeping or duplicating as lit
 Mouse Bindings
 --------------
 * Node Editor Background:
-  * LMB: Deselect all nodes/connectors
-  * Drag LMB: Add nodes/connectors touching the dragged box to the selection
-  * ALT+Drag LMB: Add nodes/connectors enclosed in the dragged box to the selection
-  * SHIFT+Drag LMB: Remove nodes/connectors touching the dragged box from the selection
-  * SHIFT+ALT+Drag LMB: Remove nodes/connectors enclosed in the dragged box from the selection
+  * LMB: Deselect all nodes/edges
+  * Drag LMB: Select nodes/edges touching the dragged box (clears previous selection)
+  * ALT+Drag LMB: Select nodes/edges enclosed in the dragged box (clears previous selection)
+  * SHIFT+Drag LMB: Add nodes/edges touching the dragged box from the selection
+  * SHIFT+ALT+Drag LMB: Add nodes/edges enclosed in the dragged box from the selection
+  * CTRL+SHIFT+Drag LMB: Remove nodes/edges touching the dragged box from the selection
+  * CTRL+SHIFT+ALT+Drag LMB: Remove nodes/edges enclosed in the dragged box from the selection
   * Scroll Wheel: Zoom in/Zoom out at current cursor position
   * *RMB: Opens context menu for adding new nodes (in the sample)*
 * Node body:
-  * LMB: Select node and deselect all other nodes/connectors
-  * CTRL+LMB: Toggle selection
-  * Drag LMB: Add connector
-* Connector:
-  * LMB: Select connector and deselect all other nodes/connectors
-* Connector socket:
-  * Drag LMB: Add connector
-  * CTRL+LMB: Toggle selection
+  * LMB: Select node and deselect all other nodes/edges
+  * SHIFT+LMB: Toggle selection
+  * Drag LMB: Add edge
+* Edge:
+  * LMB: Select edge and deselect all other nodes/edges
+  * SHIFT+LMB: Toggle selection
+* Socket:
+  * Drag LMB: Add edge
 
 Key Bindings
 ------------
-* ESC: Cancel actions like adding a connector or selecting nodes
+* ESC: Cancel actions like adding a edge or selecting nodes
 * HOME: Centers the node editor view and resets the zoom level
-* *CTRL+A: Selects all nodes and connectors (in the sample)*
-* *DEL: Deletes selected nodes and connectors (in the sample)*
+* *CTRL+A: Selects all nodes and edges (in the sample)*
+* *DEL: Deletes selected nodes and edges (in the sample)*
 
 Notes
 -----
