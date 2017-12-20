@@ -316,6 +316,15 @@ void copyTransformDrawList(ImDrawList *targetDrawList, ImDrawList *sourceDrawLis
         ImRect clipRect(clipRectMin * scale + translate, clipRectMax * scale + translate);
         clipRect.ClipWith(targetClip);
 
+        if (targetClip.Max.x <= targetClip.Min.x || targetClip.Max.y <= targetClip.Min.y) {
+            targetDrawList->CmdBuffer.back().UserCallback = (ImDrawCallback)([](const ImDrawList*, const ImDrawCmd*) {
+                // This would be fully clipped, so skip it to avoid errors.
+                // Adding an empty user callback for rendering is the easiest way to do so ...
+                // ... Still it would be better to skip the relevant data in the vertex/index buffers
+                // and omit the draw cmd (TODO).
+            });
+        }
+
         targetDrawList->CmdBuffer.back().ClipRect = ImVec4(clipRect.Min.x, clipRect.Min.y, clipRect.Max.x, clipRect.Max.y);
     }
 }
@@ -1009,6 +1018,11 @@ bool NodeArea::GetNewConnection(int *connectorSourceNode, int *connectorSourceNo
         }
     }
     return false;
+}
+
+ImVec2 NodeArea::GetAbsoluteMousePos()
+{
+    return ImGui::GetMousePos() - ImGui::GetWindowPos();
 }
 
 #ifdef IMGUI_NODES_DEBUG

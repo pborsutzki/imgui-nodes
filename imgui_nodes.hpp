@@ -183,6 +183,8 @@ struct NodeArea {
 
     bool GetNewConnection(int *connectorSourceNode, int *connectorSourceNodeSlot, int *connectorSinkNode, int *connectorSinkNodeSlot);
 
+    ImVec2 GetAbsoluteMousePos();
+
 #ifdef IMGUI_NODES_DEBUG
     void ShowMetricsWindow(bool* p_open = nullptr);
     std::stringstream& Debug();

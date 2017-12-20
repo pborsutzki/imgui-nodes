@@ -8,5 +8,6 @@ add_library(imgui_nodes STATIC
     "../cubicSplineClosestPoint/CubicSplineSimd.inl"
     )
 target_include_directories(imgui_nodes PUBLIC "." "../cubicSplineClosestPoint")
+target_compile_definitions(imgui_nodes PRIVATE -DIMGUI_ANTIALIASFRINGESCALE)
 target_link_libraries(imgui_nodes imgui)
 set_target_properties(imgui_nodes PROPERTIES FOLDER tools)
