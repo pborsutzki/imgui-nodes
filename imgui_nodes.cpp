@@ -432,7 +432,7 @@ bool NodeArea::Selection::isSelected(int id) const {
     return selectedItems[id];
 }
 
-void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, bool updateStyle) {
+void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, bool updateStyle, bool snapAllNodesToGrid) {
     state.outerContext = ImGui::GetCurrentContext();
     if (!state.initialized) {
         state.zoom = 1.f;
@@ -523,6 +523,10 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, boo
         ImGui::SetWindowPos(ImGui::GetCurrentWindowRead()->PosFloat + ImGui::GetIO().MouseDelta);
     } else {
         state.scrolling = false;
+    }
+
+    if (state.mode == Mode::None && snapAllNodesToGrid) {
+        state.mode = Mode::SnapAllNodesToGrid;
     }
 
     if (state.outerWindowFocused)
@@ -667,6 +671,7 @@ void NodeArea::EndNodeArea() {
         }
         break;
     case Mode::SelectAll:
+    case Mode::SnapAllNodesToGrid:
         state.mode = Mode::None;
         break;
     }
@@ -744,13 +749,14 @@ bool NodeArea::BeginNode(NodeState &node) {
     // of connectors
     char buf[64];
     sprintf_s(buf, "##node%d", node.id);
+    
     ImGui::SetNextWindowPos(state.innerWndPos + node.pos);
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.nodePadding + style.slotRadius);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
 
-    ImGui::Begin(buf, nullptr, ImVec2(150, -1), -1.f, ImGuiWindowFlags_AlwaysAutoResize /*| ImGuiWindowFlags_ShowBorders */| ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
+    ImGui::Begin(buf, nullptr, ImVec2(150, -1), -1.f, ImGuiWindowFlags_AlwaysAutoResize | /* ImGuiWindowFlags_ShowBorders | */ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
 
     ImGui::PushID(&node);
 
@@ -829,8 +835,8 @@ void NodeArea::EndNode(NodeState &node, bool resizable) {
             }
         }
 
-        ImGui::SetCursorPos(ImVec2(0.f, 0.f) + style.slotRadius);
-        ImGui::InvisibleButton("node", node.size);
+        ImGui::SetCursorPos(ImVec2(0.f, 0.f) + style.slotRadius + style.nodePadding);
+        ImGui::InvisibleButton("node", node.size - style.nodePadding*2.f);
         bool itemActive = state.outerWindowFocused && ImGui::IsItemActive();
         bool itemWasActive = state.outerWindowFocused && WasItemActive();
 #ifdef IMGUI_NODES_DEBUG
@@ -869,13 +875,19 @@ void NodeArea::EndNode(NodeState &node, bool resizable) {
             node.pos = node.posFloat;
         } else {
             node.pos = ImVec2(
-                floor(node.posFloat.x / state.snapGrid) * state.snapGrid,
-                floor(node.posFloat.y / state.snapGrid) * state.snapGrid
-            );
+                floor((node.posFloat.x) / state.snapGrid) * state.snapGrid,
+                floor((node.posFloat.y) / state.snapGrid) * state.snapGrid
+            ) - style.connectorSize;
         }
         node.forceRedraw = true;
     } else if (state.mode == Mode::None) {
         node.posFloat = node.pos;
+    } else if (state.mode == Mode::SnapAllNodesToGrid) {
+        node.posFloat = node.pos = ImVec2(
+            floor((node.posFloat.x) / state.snapGrid) * state.snapGrid,
+            floor((node.posFloat.y) / state.snapGrid) * state.snapGrid
+        ) - style.connectorSize;
+        node.forceRedraw = true;
     }
     ImGui::PopID();
     ImGui::End();

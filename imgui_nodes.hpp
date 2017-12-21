@@ -116,6 +116,7 @@ struct NodeArea {
         Selecting, SelectionCaptureAdd, SelectionCaptureRemove, 
         DraggingNodes, ResizingNode,
         DraggingConnectorInput, DraggingConnectorOutput,
+        SnapAllNodesToGrid,
         Escaped, SelectAll
     };
 
@@ -170,7 +171,7 @@ struct NodeArea {
         state.selectedLinks.clearSelection();
     }
 
-    void BeginNodeArea(std::function<void(UserAction)> actionCallback, bool updateStyle = false);
+    void BeginNodeArea(std::function<void(UserAction)> actionCallback, bool updateStyle = false, bool snapAllNodesToGrid = false);
     void EndNodeArea();
 
     bool BeginNode(NodeState &node);
