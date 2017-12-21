@@ -732,6 +732,7 @@ void NodeArea::EndNodeArea() {
 }
 
 bool NodeArea::BeginNode(NodeState &node) {
+    bool oldSkip = node.skip;
     node.skip = false;
 
     if (!node.forceRedraw) {
@@ -756,7 +757,10 @@ bool NodeArea::BeginNode(NodeState &node) {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
 
-    ImGui::Begin(buf, nullptr, ImVec2(150, -1), -1.f, ImGuiWindowFlags_AlwaysAutoResize | /* ImGuiWindowFlags_ShowBorders | */ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
+    if (oldSkip && !node.skip) {
+        ImGui::SetNextWindowSize(node.size + style.slotRadius * 2.f);
+    }
+    ImGui::Begin(buf, nullptr, ImGuiWindowFlags_AlwaysAutoResize | /* ImGuiWindowFlags_ShowBorders | */ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
 
     ImGui::PushID(&node);
 
