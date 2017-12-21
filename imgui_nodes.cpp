@@ -316,7 +316,7 @@ void copyTransformDrawList(ImDrawList *targetDrawList, ImDrawList *sourceDrawLis
         ImRect clipRect(clipRectMin * scale + translate, clipRectMax * scale + translate);
         clipRect.ClipWith(targetClip);
 
-        if (targetClip.Max.x <= targetClip.Min.x || targetClip.Max.y <= targetClip.Min.y) {
+        if (clipRect.Max.x <= clipRect.Min.x || clipRect.Max.y <= clipRect.Min.y) {
             targetDrawList->CmdBuffer.back().UserCallback = (ImDrawCallback)([](const ImDrawList*, const ImDrawCmd*) {
                 // This would be fully clipped, so skip it to avoid errors.
                 // Adding an empty user callback for rendering is the easiest way to do so ...
