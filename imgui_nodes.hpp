@@ -162,6 +162,7 @@ struct NodeArea {
 
         bool outerWindowFocused;
         bool outerWindowHovered;
+        bool anyItemActive;
     } state;
 
     Style style;

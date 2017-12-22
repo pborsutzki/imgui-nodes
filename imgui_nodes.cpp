@@ -439,6 +439,7 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, boo
         state.innerWndPos = -state.nodeAreaSize / 2.f + ImGui::GetWindowSize() / 2.f;
         state.mode = Mode::None;
         state.scrolling = false;
+        state.anyItemActive = false;
         state.innerContext = setupInnerContext(state.outerContext);
         state.initialized = true;
     }
@@ -467,13 +468,13 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, boo
     state.outerWindowFocused = ImGui::IsWindowFocused();
     state.outerWindowHovered = ImGui::IsWindowHovered();
 
-    if (state.outerWindowFocused && state.hoveredNode == -1 && ImGui::IsKeyReleased(outerIo.KeyMap[ImGuiKey_Home])) {
+    if (state.outerWindowFocused && state.hoveredNode == -1 && !state.anyItemActive && ImGui::IsKeyReleased(outerIo.KeyMap[ImGuiKey_Home])) {
         state.zoom = 1.f;
         state.innerWndPos = -state.nodeAreaSize / 2.f + ImGui::GetWindowSize() / 2.f;
         setWindowPos = true;
     }
 
-    if (state.outerWindowFocused && state.hoveredNode == -1 && outerIo.MouseWheel != 0.f) {
+    if (state.outerWindowFocused && state.hoveredNode == -1 && outerIo.MouseWheel != 0.f && state.innerContext->OpenPopupStack.empty()) {
         const float factor = 1.25f;
         float newZoom = outerIo.MouseWheel > 0 ? (state.zoom * factor) : (state.zoom / factor);
         if (newZoom > 0.15f && newZoom < 16.f) {
@@ -699,6 +700,7 @@ void NodeArea::EndNodeArea() {
     }
 
     state.innerWndPos = ImGui::GetCurrentWindowRead()->PosFloat;
+    state.anyItemActive = ImGui::IsAnyItemActive();
     ImGui::PopClipRect();
     ImGui::End();
     ImGui::PopStyleColor();
@@ -848,10 +850,6 @@ void NodeArea::EndNode(NodeState &node, bool resizable) {
 #endif
         hovered = state.outerWindowHovered && ImGui::IsItemHovered();
 
-        if (state.mode == Mode::SelectAll) {
-            state.selectedNodes.addToSelection(node.id);
-        }
-
         if (itemWasActive && ImGui::IsMouseReleased(0) && state.mode == Mode::None)
         {
             if (ImGui::GetIO().KeyShift) {
@@ -869,6 +867,9 @@ void NodeArea::EndNode(NodeState &node, bool resizable) {
         if (hovered) {
             state.hoveredNode = node.id;
         }
+    }
+    if (state.mode == Mode::SelectAll) {
+        state.selectedNodes.addToSelection(node.id);
     }
     selected = state.selectedNodes.isSelected(node.id);
 
