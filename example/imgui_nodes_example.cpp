@@ -82,7 +82,7 @@ struct Graph
             ImGui::Text("Add Node:");
             ImGui::Separator();
             for_each_alternative<NodeType>([this, popupPos](auto S) {
-                using type = decltype(S)::type;
+                using type = typename decltype(S)::type;
                 if constexpr(!std::is_same_v<type, std::monostate>) {
                     if (findIgnoreCase(type::name, filter)) {
                         if (ImGui::Selectable(type::name)) {
