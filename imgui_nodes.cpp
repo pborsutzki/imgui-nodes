@@ -699,7 +699,7 @@ void NodeArea::EndNodeArea() {
         draw_list->AddBezierCurve(p1, cp1, cp2, p2, style.connectorDragging, style.connectorDraggingSize);
     }
 
-    state.innerWndPos = ImGui::GetCurrentWindowRead()->PosFloat;
+    state.innerWndPos = ImGui::GetCurrentWindowRead()->Pos;
     state.anyItemActive = ImGui::IsAnyItemActive();
     ImGui::PopClipRect();
     ImGui::End();
