@@ -987,7 +987,7 @@ bool NodeArea::ConnectNodeSlots(int connectorId, NodeState &sourceNode, int sour
 
     p1 += offset; p2 += offset; cp1 += offset; cp2 += offset;
 
-    bool hovered = state.outerWindowFocused &&
+    bool hovered = state.outerWindowFocused && ImGui::IsWindowHovered() &&
         closeToBezier(ImGui::GetMousePos(), p1, cp1, cp2, p2, 8.f);
     if (state.selectedLinks.isSelected(connectorId) || wouldSelect) {
         draw_list->AddBezierCurve(p1, cp1, cp2, p2, style.connectorSelectedColor, style.connectorSelectedSize);
