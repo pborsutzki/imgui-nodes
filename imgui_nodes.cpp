@@ -1014,7 +1014,7 @@ bool NodeArea::ConnectNodeSlots(int connectorId, NodeState &sourceNode, int sour
     return true;
 }
 
-bool NodeArea::GetNewConnection(int *connectorSourceNode, int *connectorSourceNodeSlot, int *connectorSinkNode, int *connectorSinkNodeSlot)
+bool NodeArea::GetNewConnection(int *connectorSourceNode, int *connectorSourceNodeSlot, int *connectorSinkNode, int *connectorSinkNodeSlot) const
 {
     if (ImGui::IsMouseReleased(0) && state.connectorStartNode != state.connectorEndNode &&
         ((state.connectorStartNode != -1 && state.connectorStartSlot != -1) ||
@@ -1037,7 +1037,7 @@ bool NodeArea::GetNewConnection(int *connectorSourceNode, int *connectorSourceNo
     return false;
 }
 
-ImVec2 NodeArea::GetAbsoluteMousePos()
+ImVec2 NodeArea::GetAbsoluteMousePos() const
 {
     return ImGui::GetMousePos() - ImGui::GetWindowPos();
 }

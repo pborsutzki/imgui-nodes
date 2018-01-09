@@ -183,9 +183,9 @@ struct NodeArea {
 
     bool ConnectNodeSlots(int connectorId, NodeState &sourceNode, int sourceSlot, NodeState &sinkNode, int sinkSlot);
 
-    bool GetNewConnection(int *connectorSourceNode, int *connectorSourceNodeSlot, int *connectorSinkNode, int *connectorSinkNodeSlot);
+    bool GetNewConnection(int *connectorSourceNode, int *connectorSourceNodeSlot, int *connectorSinkNode, int *connectorSinkNodeSlot) const;
 
-    ImVec2 GetAbsoluteMousePos();
+    ImVec2 GetAbsoluteMousePos() const;
 
 #ifdef IMGUI_NODES_DEBUG
     void ShowMetricsWindow(bool* p_open = nullptr);
