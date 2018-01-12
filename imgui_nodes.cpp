@@ -16,6 +16,7 @@
 #include <vector>
 #include <algorithm>
 #include <array>
+#include <limits>
 
 #ifdef IMGUI_NODES_DEBUG
 #include <sstream>
@@ -433,6 +434,22 @@ bool NodeArea::Selection::isSelected(int id) const {
 }
 
 void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, NodeAreaFlags flags) {
+    bool setWindowPos = false;
+
+    if (state.flags & NodeAreaFlags_ZoomToFit) {
+        if (state.lowerBound.x != std::numeric_limits<float>::max()) {
+            ImVec2 extent = state.upperBound - state.lowerBound;
+            ImVec2 factor = ImGui::GetWindowSize() / extent;
+            state.zoom = std::max(std::min(std::min(factor.x, factor.y) * 0.95f, 1.f), 0.15f);
+            state.innerWndPos = -state.lowerBound + (ImGui::GetWindowSize() / 2.f) / state.zoom - extent / 2.f;
+            setWindowPos = true;
+        } else {
+            state.zoom = 1.f;
+            state.innerWndPos = -state.nodeAreaSize / 2.f + ImGui::GetWindowSize() / 2.f;
+            setWindowPos = true;
+        }
+    }
+
     state.flags = flags;
     state.outerContext = ImGui::GetCurrentContext();
     if (!state.initialized) {
@@ -465,14 +482,12 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
             }
         }
     }
-    bool setWindowPos = false;
+
     state.outerWindowFocused = ImGui::IsWindowFocused();
     state.outerWindowHovered = ImGui::IsWindowHovered();
 
     if (state.outerWindowFocused && state.hoveredNode == -1 && !state.anyItemActive && ImGui::IsKeyReleased(outerIo.KeyMap[ImGuiKey_Home])) {
-        state.zoom = 1.f;
-        state.innerWndPos = -state.nodeAreaSize / 2.f + ImGui::GetWindowSize() / 2.f;
-        setWindowPos = true;
+        state.flags |= NodeAreaFlags_ZoomToFit;
     }
 
     if (state.outerWindowFocused && state.hoveredNode == -1 && outerIo.MouseWheel != 0.f && state.innerContext->OpenPopupStack.empty()) {
@@ -633,6 +648,13 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
         state.connectorEndSlot = -1;
     }
     state.anySizeChanged = false;
+
+    if (state.flags & NodeAreaFlags_ZoomToFit) {
+        float max = std::numeric_limits<float>::max();
+        float min = std::numeric_limits<float>::lowest();
+        state.lowerBound = ImVec2(max, max);
+        state.upperBound = ImVec2(min, min);
+    }
 
 #ifdef IMGUI_NODES_DEBUG
     debug 
@@ -900,6 +922,13 @@ void NodeArea::EndNode(NodeState &node) {
             floor((node.posFloat.y) / state.snapGrid) * state.snapGrid
         ) - style.connectorSize;
         node.forceRedraw = true;
+    }
+    if (state.flags & NodeAreaFlags_ZoomToFit) {
+        ImRect r(state.lowerBound, state.upperBound);
+        r.Add(node.pos);
+        r.Add(node.pos + node.size);
+        state.lowerBound = r.Min;
+        state.upperBound = r.Max;
     }
     ImGui::PopID();
     ImGui::End();

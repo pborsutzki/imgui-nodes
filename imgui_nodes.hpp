@@ -17,6 +17,7 @@ enum NodeAreaFlags_ {
     NodeAreaFlags_SnapToGrid  = 1 << 1, // Aligns all nodes to the configured snapGrid.
     NodeAreaFlags_ForceRedraw = 1 << 2, // Redraws all visible and invisible nodes. Use 
                                         // after changing node positions/sizes programmatically.
+    NodeAreaFlags_ZoomToFit   = 1 << 3  // Changes zoom level to fit the whole graph on the visible screen.
 };
 
 struct SlotState {
@@ -155,6 +156,9 @@ struct NodeArea {
 
         ImVec2 dragStart;
         ImVec2 dragEnd;
+
+        ImVec2 lowerBound;
+        ImVec2 upperBound;
 
         int connectorStartNode;
         int connectorStartSlot;
