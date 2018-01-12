@@ -163,7 +163,7 @@ struct Graph
             }
         };
 
-        nodeArea.BeginNodeArea(userAction, updateStyle);
+        nodeArea.BeginNodeArea(userAction, updateStyle ? nodes::NodeAreaFlags_UpdateStyle : 0);
 
         for (int i = 0; i < (int)nodes.size(); ++i) {
             ImGui::PushID(i);
@@ -329,7 +329,7 @@ struct CodeNode : public BaseNode<CodeNode> {
     char code[1024*16] = "function(float4 input, int _) {\n  return input * 4.0;\n }\n";
 
     void draw(nodes::NodeArea &area) {
-        if (area.BeginNode(state)) {
+        if (area.BeginNode(state, true)) {
             ImGui::Text("%s (%d)", name, state.id);
 
             area.BeginSlot(state);
@@ -338,10 +338,12 @@ struct CodeNode : public BaseNode<CodeNode> {
 
             area.BeginSlot(state);
             ImGui::Text("Code");
-            ImGui::InputTextMultiline("##source", code, IM_ARRAYSIZE(code), ImVec2(300.0f, ImGui::GetTextLineHeight() * 16), ImGuiInputTextFlags_AllowTabInput);
+            ImVec2 size = area.GetContentSize(state) - ImGui::GetCursorPos();
+            size = ImVec2(std::max(size.x, 100.f), std::max(size.y, 100.f));
+            ImGui::InputTextMultiline("##source", code, IM_ARRAYSIZE(code), size, ImGuiInputTextFlags_AllowTabInput);
             area.EndSlot(state);
         }
-        area.EndNode(state, true);
+        area.EndNode(state);
     }
 };
 
@@ -353,12 +355,16 @@ struct Recursion : public BaseNode<Recursion> {
     Graph<std::monostate, InputNode, OutputNode, Combine, Recursion, ConstantColor, CodeNode> innerGraph;
 
     void draw(nodes::NodeArea &area) {
-        if (area.BeginNode(state)) {
+        if (area.BeginNode(state, true)) {
             ImGui::Text("%s (%d)", name, state.id);
 
             area.BeginSlot(state);
             ImGui::Text("Input");
             area.EndSlot(state, (int)DataType::Float4);
+
+            area.BeginSlot(state);
+            ImGui::Text("Output");
+            area.EndSlot(state, -1, (int)DataType::Float4);
 
             area.BeginSlot(state);
             ImGui::Text("Putput");
@@ -367,19 +373,17 @@ struct Recursion : public BaseNode<Recursion> {
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
             ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, ImU32(ImColor(60, 60, 70, 200)));
             ImGui::PushID(this);
-            ImGui::BeginChild("border2", ImVec2(200, 150), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+            ImVec2 size = area.GetContentSize(state) - ImGui::GetCursorPos();
+            size = ImVec2(std::max(size.x, 100.f), std::max(size.y, 100.f));
+            ImGui::BeginChild("border2", size, true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
             innerGraph.draw(false);
             ImGui::EndChild();
             ImGui::PopID();
             ImGui::PopStyleColor();
             ImGui::PopStyleVar(2);
             area.EndSlot(state);
-
-            area.BeginSlot(state);
-            ImGui::Text("Output");
-            area.EndSlot(state, -1, (int)DataType::Float4);
         }
-        area.EndNode(state, true);
+        area.EndNode(state);
     }
 };
 

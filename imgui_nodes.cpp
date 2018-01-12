@@ -432,7 +432,8 @@ bool NodeArea::Selection::isSelected(int id) const {
     return selectedItems[id];
 }
 
-void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, bool updateStyle, bool snapAllNodesToGrid) {
+void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, NodeAreaFlags flags) {
+    state.flags = flags;
     state.outerContext = ImGui::GetCurrentContext();
     if (!state.initialized) {
         state.zoom = 1.f;
@@ -443,7 +444,7 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, boo
         state.innerContext = setupInnerContext(state.outerContext);
         state.initialized = true;
     }
-    if (updateStyle) {
+    if (state.flags & NodeAreaFlags_UpdateStyle) {
         state.innerContext->Style = state.outerContext->Style;
     }
 
@@ -524,10 +525,6 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, boo
         ImGui::SetWindowPos(ImGui::GetCurrentWindowRead()->PosFloat + ImGui::GetIO().MouseDelta);
     } else {
         state.scrolling = false;
-    }
-
-    if (state.mode == Mode::None && snapAllNodesToGrid) {
-        state.mode = Mode::SnapAllNodesToGrid;
     }
 
     if (state.outerWindowFocused)
@@ -635,6 +632,7 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, boo
         state.connectorEndNode = -1;
         state.connectorEndSlot = -1;
     }
+    state.anySizeChanged = false;
 
 #ifdef IMGUI_NODES_DEBUG
     debug 
@@ -649,7 +647,8 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, boo
 
 void NodeArea::EndNodeArea() {
 #ifdef IMGUI_NODES_DEBUG
-    debug << "EndNodeArea " << ImGui::IsAnyItemActive() << std::endl;
+    debug << "EndNodeArea " << ImGui::IsAnyItemActive() << " " << state.anySizeChanged << std::endl;
+    printf("changed: %s\n", state.anySizeChanged ? "true" : "false");
 #endif
 
     switch (state.mode)
@@ -672,7 +671,6 @@ void NodeArea::EndNodeArea() {
         }
         break;
     case Mode::SelectAll:
-    case Mode::SnapAllNodesToGrid:
         state.mode = Mode::None;
         break;
     }
@@ -733,9 +731,11 @@ void NodeArea::EndNodeArea() {
 #endif
 }
 
-bool NodeArea::BeginNode(NodeState &node) {
+bool NodeArea::BeginNode(NodeState &node, bool resizeable) {
     bool oldSkip = node.skip;
     node.skip = false;
+
+    node.forceRedraw = node.forceRedraw || node.size.x < 0.0f || state.flags & NodeAreaFlags_ForceRedraw;
 
     if (!node.forceRedraw) {
         ImVec2 origin = state.innerWndPos + node.pos;
@@ -785,6 +785,32 @@ bool NodeArea::BeginNode(NodeState &node) {
     ImVec2 offset = ImGui::GetWindowPos() + style.slotRadius;
 
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    
+    if (resizeable)
+    {
+        const float window_rounding = style.nodeRounding;
+        const float resize_corner_size = ImMax(state.innerContext->FontSize * 1.35f, window_rounding + 1.0f + state.innerContext->FontSize * 0.2f);
+        const ImVec2 br = offset + node.size;
+        bool resizeHovered, resizeHeld;
+
+        const ImRect resize_rect(br - ImFloor(ImVec2(resize_corner_size * 0.75f, resize_corner_size * 0.75f)), br);
+        const ImGuiID resize_id = ImGui::GetID(&node);
+        ImGui::ButtonBehavior(resize_rect, resize_id, &resizeHovered, &resizeHeld, ImGuiButtonFlags_FlattenChilds);
+        ImU32 resize_col = ImGui::GetColorU32(resizeHeld ? ImGuiCol_ResizeGripActive : resizeHovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
+
+        if (resizeHeld && (state.mode == Mode::None || state.mode == Mode::ResizingNode)) {
+            state.mode = Mode::ResizingNode;
+            node.size += ImGui::GetIO().MouseDelta;
+        } else if (!resizeHeld && state.mode == Mode::ResizingNode) {
+            state.mode = Mode::None;
+        }
+
+        draw_list->PathLineTo(br + ImVec2(-resize_corner_size, -style.nodeBorderSize));
+        draw_list->PathLineTo(br + ImVec2(-style.nodeBorderSize, -resize_corner_size));
+        draw_list->PathArcToFast(ImVec2(br.x - window_rounding - style.nodeBorderSize, br.y - window_rounding - style.nodeBorderSize), window_rounding, 0, 3);
+        draw_list->PathFillConvex(resize_col);
+    }
+
     draw_list->PushClipRect(state.innerWndPos + node.pos, state.innerWndPos + node.pos + ImGui::GetWindowSize());
 
     draw_list->AddRectFilled(offset, offset + node.size, nodeBg, style.nodeRounding);
@@ -802,7 +828,7 @@ bool NodeArea::BeginNode(NodeState &node) {
     return true;
 }
 
-void NodeArea::EndNode(NodeState &node, bool resizable) {
+void NodeArea::EndNode(NodeState &node) {
     bool hovered = false;
     bool selected = false;
     if (!node.skip) {
@@ -812,32 +838,12 @@ void NodeArea::EndNode(NodeState &node, bool resizable) {
 
         ImGui::EndGroup();
 
-        ImVec2 offset = ImGui::GetWindowPos() + style.slotRadius;
-
-        if (!resizable || node.size.x < 0.f) {
-            //node.size = ImGui::GetWindowContentRegionMax() - ImGui::GetWindowContentRegionMin() + style.nodePadding * 2.f; //ImGui::GetItemRectSize() + style.nodePadding * 2.f;
-            //node.size = ImGui::GetItemRectSize() + style.nodePadding * 2.f;
-            //ImGui::SetWindowSize(node.size + style.slotRadius * 2.f);
-            node.size = ImGui::GetWindowSize() - style.slotRadius * 2.f;
-        }
-
-        const float window_rounding = style.nodeRounding;
-        const float resize_corner_size = ImMax(state.innerContext->FontSize * 1.35f, window_rounding + 1.0f + state.innerContext->FontSize * 0.2f);
-        const ImVec2 br = offset + node.size;
-        ImU32 resize_col = 0;
-        if (resizable)
-        {
-            const ImRect resize_rect(br - ImFloor(ImVec2(resize_corner_size * 0.75f, resize_corner_size * 0.75f)), br);
-            const ImGuiID resize_id = ImGui::GetID(&node);
-            bool resizeHovered, resizeHeld;
-            ImGui::ButtonBehavior(resize_rect, resize_id, &resizeHovered, &resizeHeld, ImGuiButtonFlags_FlattenChilds);
-            resize_col = ImGui::GetColorU32(resizeHeld ? ImGuiCol_ResizeGripActive : resizeHovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
-
-            if (resizeHeld && (state.mode == Mode::None || state.mode == Mode::ResizingNode)) {
-                state.mode = Mode::ResizingNode;
-                node.size += ImGui::GetIO().MouseDelta;
-            } else if (!resizeHeld && state.mode == Mode::ResizingNode) {
-                state.mode = Mode::None;
+        if (state.mode != Mode::ResizingNode) {
+            ImVec2 newSize = ImGui::GetWindowSize() - style.slotRadius * 2.f;
+            if (newSize != node.size) {
+                node.size = newSize;
+                node.forceRedraw = true;
+                state.anySizeChanged = true;
             }
         }
 
@@ -887,7 +893,8 @@ void NodeArea::EndNode(NodeState &node, bool resizable) {
         node.forceRedraw = true;
     } else if (state.mode == Mode::None) {
         node.posFloat = node.pos;
-    } else if (state.mode == Mode::SnapAllNodesToGrid) {
+    } 
+    if (state.flags & NodeAreaFlags_SnapToGrid) {
         node.posFloat = node.pos = ImVec2(
             floor((node.posFloat.x) / state.snapGrid) * state.snapGrid,
             floor((node.posFloat.y) / state.snapGrid) * state.snapGrid
@@ -1040,6 +1047,11 @@ bool NodeArea::GetNewConnection(int *connectorSourceNode, int *connectorSourceNo
 ImVec2 NodeArea::GetAbsoluteMousePos() const
 {
     return ImGui::GetMousePos() - ImGui::GetWindowPos();
+}
+
+ImVec2 NodeArea::GetContentSize(NodeState &node) const
+{
+    return node.size - style.slotRadius;
 }
 
 #ifdef IMGUI_NODES_DEBUG

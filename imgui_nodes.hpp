@@ -11,6 +11,14 @@ enum class UserAction {
     None, Delete, Copy, Cut, Paste, Undo, Redo, NewConnection
 };
 
+typedef int NodeAreaFlags; // These flags should typically only be set for one frame.
+enum NodeAreaFlags_ {
+    NodeAreaFlags_UpdateStyle = 1 << 0, // Applies the current ImGui style to the node graph area.
+    NodeAreaFlags_SnapToGrid  = 1 << 1, // Aligns all nodes to the configured snapGrid.
+    NodeAreaFlags_ForceRedraw = 1 << 2, // Redraws all visible and invisible nodes. Use 
+                                        // after changing node positions/sizes programmatically.
+};
+
 struct SlotState {
     int type;
     ImVec2 pos;
@@ -116,7 +124,6 @@ struct NodeArea {
         Selecting, SelectionCaptureAdd, SelectionCaptureRemove, 
         DraggingNodes, ResizingNode,
         DraggingConnectorInput, DraggingConnectorOutput,
-        SnapAllNodesToGrid,
         Escaped, SelectAll
     };
 
@@ -160,9 +167,12 @@ struct NodeArea {
         Selection selectedNodes;
         Selection selectedLinks;
 
+        NodeAreaFlags flags;
+
         bool outerWindowFocused;
         bool outerWindowHovered;
         bool anyItemActive;
+        bool anySizeChanged;
     } state;
 
     Style style;
@@ -172,11 +182,11 @@ struct NodeArea {
         state.selectedLinks.clearSelection();
     }
 
-    void BeginNodeArea(std::function<void(UserAction)> actionCallback, bool updateStyle = false, bool snapAllNodesToGrid = false);
+    void BeginNodeArea(std::function<void(UserAction)> actionCallback, NodeAreaFlags flags);
     void EndNodeArea();
 
-    bool BeginNode(NodeState &node);
-    void EndNode(NodeState &node, bool resizable = false);
+    bool BeginNode(NodeState &node, bool resizeable = false);
+    void EndNode(NodeState &node);
 
     void BeginSlot(NodeState &node);
     void EndSlot(NodeState &node, int inputType = -1, int outputType = -1);
@@ -186,6 +196,7 @@ struct NodeArea {
     bool GetNewConnection(int *connectorSourceNode, int *connectorSourceNodeSlot, int *connectorSinkNode, int *connectorSinkNodeSlot) const;
 
     ImVec2 GetAbsoluteMousePos() const;
+    ImVec2 GetContentSize(NodeState &node) const;
 
 #ifdef IMGUI_NODES_DEBUG
     void ShowMetricsWindow(bool* p_open = nullptr);
