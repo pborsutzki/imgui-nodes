@@ -773,7 +773,11 @@ bool NodeArea::BeginNode(NodeState &node, bool resizeable) {
     // put nodes into a separate child window so we can paint them on top 
     // of connectors
     char buf[64];
+#ifdef _MSC_VER
     sprintf_s(buf, "##node%d", node.id);
+#else
+    sprintf(buf, "##node%d", node.id);
+#endif
     
     ImGui::SetNextWindowPos(state.innerWndPos + node.pos);
 
