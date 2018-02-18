@@ -8,7 +8,7 @@
 namespace nodes {
 
 enum class UserAction {
-    None, Delete, Copy, Cut, Paste, Undo, Redo, NewConnection
+    None, Delete, Copy, Cut, Paste, Undo, Redo, NewEdge
 };
 
 typedef int NodeAreaFlags; // These flags should typically only be set for one frame.
@@ -54,13 +54,13 @@ struct Style {
     ImColor selectionFill;
     ImColor selectionBorder;
 
-    float   connectorSize;
-    ImColor connectorSelectedColor;
-    float   connectorSelectedSize;
-    ImColor connectorDragging;
-    float   connectorDraggingSize;
-    ImColor connectorHovered;
-    ImColor connectorInvalid;
+    float   edgeSize;
+    ImColor edgeSelectedColor;
+    float   edgeSelectedSize;
+    ImColor edgeDragging;
+    float   edgeDraggingSize;
+    ImColor edgeHovered;
+    ImColor edgeInvalid;
 
     ImVec2  nodePadding;
     ImColor nodeFill;
@@ -76,7 +76,7 @@ struct Style {
     ImColor slotSeparatorColor;
     float   slotSeparatorSize;
 
-    std::vector<ImColor> connectorTypeColor;
+    std::vector<ImColor> edgeTypeColor;
 
     // todo: sort this vector by descending spacing
     std::vector<Grid> grid;
@@ -85,13 +85,13 @@ struct Style {
     Style() 
         : selectionFill(50, 50, 50, 50)
         , selectionBorder(255, 255, 255, 150)
-        , connectorSize(3.f)
-        , connectorSelectedColor(255, 128, 0)
-        , connectorSelectedSize(4.f)
-        , connectorDragging(255, 128, 0)
-        , connectorDraggingSize(3.f)
-        , connectorHovered(192, 192, 192)
-        , connectorInvalid(255, 0, 0)
+        , edgeSize(3.f)
+        , edgeSelectedColor(255, 128, 0)
+        , edgeSelectedSize(4.f)
+        , edgeDragging(255, 128, 0)
+        , edgeDraggingSize(3.f)
+        , edgeHovered(192, 192, 192)
+        , edgeInvalid(255, 0, 0)
         , nodePadding(8.f, 8.f)
         , nodeFill(60, 60, 60)
         , nodeFillHovered(75, 75, 75)
@@ -104,7 +104,7 @@ struct Style {
         , slotBorderHovered(255, 128, 0)
         , slotSeparatorColor(100, 100, 100)
         , slotSeparatorSize(1.5f)
-        , connectorTypeColor({
+        , edgeTypeColor({
             ImColor(150, 150, 250, 150),
             ImColor(250, 150, 250, 150),
             ImColor(250, 250, 150, 150),
@@ -124,7 +124,7 @@ struct NodeArea {
         None, 
         Selecting, SelectionCaptureAdd, SelectionCaptureRemove, 
         DraggingNodes, ResizingNode,
-        DraggingConnectorInput, DraggingConnectorOutput,
+        DraggingEdgeInput, DraggingEdgeOutput,
         Escaped, SelectAll
     };
 
@@ -145,7 +145,6 @@ struct NodeArea {
 
         ImGuiContext* innerContext;
         ImGuiContext* outerContext;
-        ImVector<ImDrawList*> renderDrawLists[3];
 
         float zoom;
         float snapGrid = 16.f;
@@ -160,16 +159,16 @@ struct NodeArea {
         ImVec2 lowerBound;
         ImVec2 upperBound;
 
-        int connectorStartNode;
-        int connectorStartSlot;
-        int connectorEndNode;
-        int connectorEndSlot;
+        int edgeStartNode;
+        int edgeStartSlot;
+        int edgeEndNode;
+        int edgeEndSlot;
 
         int activeNode = -1;
         int hoveredNode = -1;
-        int hoveredLink = -1;
+        int hoveredEdge = -1;
         Selection selectedNodes;
-        Selection selectedLinks;
+        Selection selectedEdges;
 
         NodeAreaFlags flags;
 
@@ -183,7 +182,7 @@ struct NodeArea {
 
     void clearAllSelections() {
         state.selectedNodes.clearSelection();
-        state.selectedLinks.clearSelection();
+        state.selectedEdges.clearSelection();
     }
 
     void BeginNodeArea(std::function<void(UserAction)> actionCallback, NodeAreaFlags flags);
@@ -195,9 +194,8 @@ struct NodeArea {
     void BeginSlot(NodeState &node);
     void EndSlot(NodeState &node, int inputType = -1, int outputType = -1);
 
-    bool ConnectNodeSlots(int connectorId, NodeState &sourceNode, int sourceSlot, NodeState &sinkNode, int sinkSlot);
-
-    bool GetNewConnection(int *connectorSourceNode, int *connectorSourceNodeSlot, int *connectorSinkNode, int *connectorSinkNodeSlot) const;
+    bool DrawEdge(int edgeId, NodeState const &sourceNode, int sourceSlot, NodeState const &sinkNode, int sinkSlot);
+    bool GetNewEdge(int *edgeSourceNode, int *edgeSourceNodeSlot, int *edgeSinkNode, int *edgeSinkNodeSlot) const;
 
     ImVec2 GetAbsoluteMousePos() const;
     ImVec2 GetContentSize(NodeState &node) const;

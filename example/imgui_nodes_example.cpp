@@ -44,7 +44,7 @@ inline ImVec2 operator-(const ImVec2& lhs, const ImVec2 rhs) { return ImVec2(lhs
 
 } // unnamed namespace
 
-struct Connection {
+struct Edge {
     int sourceNode;
     int sourceSlot;
     int sinkNode;
@@ -71,7 +71,7 @@ struct Graph
         ImVec2 windowPos = ImGui::GetWindowPos();
         static const char *popupStr = "item context menu";
         static char filter[64];
-        if (forceOpen || nodeArea.state.hoveredLink == -1 && nodeArea.state.hoveredNode == -1 && ImGui::IsMouseClicked(1)) {
+        if (forceOpen || nodeArea.state.hoveredEdge == -1 && nodeArea.state.hoveredNode == -1 && ImGui::IsMouseClicked(1)) {
             ImGui::OpenPopup(popupStr);
             filter[0] = '\0';
         }
@@ -103,23 +103,23 @@ struct Graph
         return false;
     }
 
-    void deleteConnector(int index) {
-        connections.erase(connections.begin() + index);
+    void deleteEdge(int index) {
+        edges.erase(edges.begin() + index);
     }
 
     void deleteNode(int index) {
-        // erasing changes positions of other nodes which would make connections wrong.
+        // erasing changes positions of other nodes which would make edges wrong.
         // -> insert placeholder instead
-        connections.erase(std::remove_if(connections.begin(), connections.end(), [index](Connection &c) {
+        edges.erase(std::remove_if(edges.begin(), edges.end(), [index](Edge &c) {
             return c.sinkNode == index || c.sourceNode == index;
-        }), connections.end());
+        }), edges.end());
         nodes[index] = std::monostate{};
     }
 
     void deleteSelectedItems() {
-        for (int i = (int)nodeArea.state.selectedLinks.selectedItems.size() - 1; i >= 0 ; --i) {
-            if (nodeArea.state.selectedLinks.selectedItems[i]) {
-                deleteConnector(i);
+        for (int i = (int)nodeArea.state.selectedEdges.selectedItems.size() - 1; i >= 0 ; --i) {
+            if (nodeArea.state.selectedEdges.selectedItems[i]) {
+                deleteEdge(i);
             }
         }
         for (int i = (int)nodeArea.state.selectedNodes.selectedItems.size() - 1; i >= 0; --i) {
@@ -139,21 +139,21 @@ struct Graph
 
         auto userAction = [&](nodes::UserAction action) {
             switch (action) {
-            case nodes::UserAction::NewConnection:
+            case nodes::UserAction::NewEdge:
             {
-                Connection newConnection;
-                nodeArea.GetNewConnection(&newConnection.sourceNode, &newConnection.sourceSlot, &newConnection.sinkNode, &newConnection.sinkSlot);
-                if (newConnection.sourceNode == -1 || newConnection.sinkNode == -1) {
+                Edge newEdge;
+                nodeArea.GetNewEdge(&newEdge.sourceNode, &newEdge.sourceSlot, &newEdge.sinkNode, &newEdge.sinkSlot);
+                if (newEdge.sourceNode == -1 || newEdge.sinkNode == -1) {
                     forcePopup = true;
                 } else {
-                    auto replacedConnector = std::find_if(connections.begin(), connections.end(), [&newConnection](Connection const &connection) {
-                        return connection.sinkNode == newConnection.sinkNode && 
-                            connection.sinkSlot == newConnection.sinkSlot;
+                    auto replacedEdge = std::find_if(edges.begin(), edges.end(), [&newEdge](Edge const &edge) {
+                        return edge.sinkNode == newEdge.sinkNode && 
+                            edge.sinkSlot == newEdge.sinkSlot;
                     });
-                    if (replacedConnector != connections.end()) {
-                        deleteConnector((int)(replacedConnector - connections.begin()));
+                    if (replacedEdge != edges.end()) {
+                        deleteEdge((int)(replacedEdge - edges.begin()));
                     }
-                    connections.emplace_back(std::move(newConnection));
+                    edges.emplace_back(std::move(newEdge));
                 }
                 break;
             }
@@ -175,13 +175,13 @@ struct Graph
             ImGui::PopID();
         }
 
-        for (int i = (int)connections.size() - 1; i >= 0; --i) {
-            auto const &connection = connections[i];
-            if (!nodeArea.ConnectNodeSlots(i,
-                getNodeState(nodes[connection.sourceNode]), connection.sourceSlot,
-                getNodeState(nodes[connection.sinkNode]), connection.sinkSlot))
+        for (int i = (int)edges.size() - 1; i >= 0; --i) {
+            auto const &edge = edges[i];
+            if (!nodeArea.DrawEdge(i,
+                getNodeState(nodes[edge.sourceNode]), edge.sourceSlot,
+                getNodeState(nodes[edge.sinkNode]), edge.sinkSlot))
             {
-                deleteConnector(i);
+                deleteEdge(i);
             }
         }
 
@@ -204,7 +204,7 @@ struct Graph
     };
 
     std::vector<NodeType> nodes;
-    std::vector<Connection> connections;
+    std::vector<Edge> edges;
     nodes::NodeArea nodeArea;
 };
 
@@ -396,8 +396,8 @@ void AddSomeNodes()
     graph.nodes.emplace_back(Combine{ nodes::NodeState((int)graph.nodes.size(), ImVec2(-100, 0) + offset) });
     graph.nodes.emplace_back(OutputNode{ nodes::NodeState((int)graph.nodes.size(), ImVec2(300, 100) + offset) });
 
-    graph.connections.emplace_back(Connection{ 0, 0, 1, 0 });
-    graph.connections.emplace_back(Connection{ 1, 0, 2, 0 });
+    graph.edges.emplace_back(Edge{ 0, 0, 1, 0 });
+    graph.edges.emplace_back(Edge{ 1, 0, 2, 0 });
 }
 
 void imgui_nodes_example_window(bool updateStyle)

@@ -207,7 +207,7 @@ bool handleNodeDragSelection(NodeArea &area, int nodeId, ImRect rect) {
     return false;
 }
 
-bool handleConnectorDragSelection(NodeArea &area, int connectorId, const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4) {
+bool handleEdgeDragSelection(NodeArea &area, int edgeId, const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4) {
     if (area.state.mode != NodeArea::Mode::None) {
         ImRect selectionRect;
         selectionRect.Add(area.state.dragStart);
@@ -229,9 +229,9 @@ bool handleConnectorDragSelection(NodeArea &area, int connectorId, const ImVec2&
 
         if (contained) {
             if (area.state.mode == NodeArea::Mode::SelectionCaptureAdd) {
-                area.state.selectedLinks.addToSelection(connectorId);
+                area.state.selectedEdges.addToSelection(edgeId);
             } else if (area.state.mode == NodeArea::Mode::SelectionCaptureRemove) {
-                area.state.selectedLinks.removeFromSelection(connectorId);
+                area.state.selectedEdges.removeFromSelection(edgeId);
             }
             return area.state.mode == NodeArea::Mode::Selecting;
         }
@@ -569,7 +569,7 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
         }
         case Mode::None: {
             if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemActive() &&
-                state.hoveredNode == -1 && state.hoveredLink == -1)
+                state.hoveredNode == -1 && state.hoveredEdge == -1)
             {
                 if (ImGui::IsMouseDown(0) && !ImGui::IsMouseDragging(0, 1.0f)) {
                     state.dragStart = ImGui::GetMousePos() - ImGui::GetWindowPos();
@@ -583,20 +583,20 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
         }
 
         if (state.mode == Mode::Selecting ||
-            state.mode == Mode::DraggingConnectorInput ||
-            state.mode == Mode::DraggingConnectorOutput)
+            state.mode == Mode::DraggingEdgeInput ||
+            state.mode == Mode::DraggingEdgeOutput)
         {
             state.dragEnd = ImGui::GetMousePos() - ImGui::GetWindowPos();
         }
 
-        if (state.mode == Mode::DraggingConnectorInput ||
-            state.mode == Mode::DraggingConnectorOutput)
+        if (state.mode == Mode::DraggingEdgeInput ||
+            state.mode == Mode::DraggingEdgeOutput)
         {
-            if (ImGui::IsMouseReleased(0) && state.connectorStartNode != state.connectorEndNode &&
-                ((state.connectorStartNode != -1 && state.connectorStartSlot != -1) ||
-                (state.connectorEndNode != -1 && state.connectorEndSlot != -1)))
+            if (ImGui::IsMouseReleased(0) && state.edgeStartNode != state.edgeEndNode &&
+                ((state.edgeStartNode != -1 && state.edgeStartSlot != -1) ||
+                (state.edgeEndNode != -1 && state.edgeEndSlot != -1)))
             {
-                actionCallback(UserAction::NewConnection);
+                actionCallback(UserAction::NewEdge);
                 state.mode = Mode::None;
             } else if (ImGui::IsMouseReleased(0) || ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Escape)))
             {
@@ -643,9 +643,9 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
     if (ImGui::IsWindowHovered()/* && !ImGui::IsAnyItemHovered()*/) {
         state.activeNode = -1;
         state.hoveredNode = -1;
-        state.hoveredLink = -1;
-        state.connectorEndNode = -1;
-        state.connectorEndSlot = -1;
+        state.hoveredEdge = -1;
+        state.edgeEndNode = -1;
+        state.edgeEndSlot = -1;
     }
     state.anySizeChanged = false;
 
@@ -684,7 +684,7 @@ void NodeArea::EndNodeArea() {
     case Mode::None:
         if (state.activeNode != -1 && ImGui::IsMouseDragging(0)) {
             if (!state.selectedNodes.isSelected(state.activeNode) || state.selectedNodes.selectedCount == 0) {
-                state.selectedLinks.clearSelection();
+                state.selectedEdges.clearSelection();
                 state.selectedNodes.clearSelection();
 
                 state.selectedNodes.addToSelection(state.activeNode);
@@ -705,18 +705,18 @@ void NodeArea::EndNodeArea() {
         draw_list->AddRect(offset + state.dragStart, offset + state.dragEnd, style.selectionBorder);
     }
 
-    if (state.mode == Mode::DraggingConnectorInput ||
-        state.mode == Mode::DraggingConnectorOutput)
+    if (state.mode == Mode::DraggingEdgeInput ||
+        state.mode == Mode::DraggingEdgeOutput)
     {
         ImDrawList *draw_list = ImGui::GetWindowDrawList();
         ImVec2 offset = ImGui::GetWindowPos();
 
-        ImVec2 p1 = offset + (state.mode == Mode::DraggingConnectorInput ? state.dragStart : state.dragEnd);
+        ImVec2 p1 = offset + (state.mode == Mode::DraggingEdgeInput ? state.dragStart : state.dragEnd);
         ImVec2 cp1 = p1 + ImVec2(+50, 0);
-        ImVec2 p2 = offset + (state.mode == Mode::DraggingConnectorInput ? state.dragEnd : state.dragStart);
+        ImVec2 p2 = offset + (state.mode == Mode::DraggingEdgeInput ? state.dragEnd : state.dragStart);
         ImVec2 cp2 = p2 + ImVec2(-50, 0);
 
-        draw_list->AddBezierCurve(p1, cp1, cp2, p2, style.connectorDragging, style.connectorDraggingSize);
+        draw_list->AddBezierCurve(p1, cp1, cp2, p2, style.edgeDragging, style.edgeDraggingSize);
     }
 
     state.innerWndPos = ImGui::GetCurrentWindowRead()->Pos;
@@ -771,7 +771,7 @@ bool NodeArea::BeginNode(NodeState &node, bool resizeable) {
     }
 
     // put nodes into a separate child window so we can paint them on top 
-    // of connectors
+    // of edges
     char buf[64];
 #ifdef _MSC_VER
     sprintf_s(buf, "##node%d", node.id);
@@ -914,7 +914,7 @@ void NodeArea::EndNode(NodeState &node) {
             node.pos = ImVec2(
                 floor((node.posFloat.x) / state.snapGrid) * state.snapGrid,
                 floor((node.posFloat.y) / state.snapGrid) * state.snapGrid
-            ) - style.connectorSize;
+            ) - style.edgeSize;
         }
         node.forceRedraw = true;
     } else if (state.mode == Mode::None) {
@@ -924,7 +924,7 @@ void NodeArea::EndNode(NodeState &node) {
         node.posFloat = node.pos = ImVec2(
             floor((node.posFloat.x) / state.snapGrid) * state.snapGrid,
             floor((node.posFloat.y) / state.snapGrid) * state.snapGrid
-        ) - style.connectorSize;
+        ) - style.edgeSize;
         node.forceRedraw = true;
     }
     if (state.flags & NodeAreaFlags_ZoomToFit) {
@@ -962,10 +962,10 @@ void NodeArea::EndSlot(NodeState &node, int inputType, int outputType) {
     
     ImVec2 offset = ImGui::GetWindowPos();
 
-    auto paintConnectorDock = [&](ImVec2 pos, ImColor col, bool input, int slotIdx, ImVec2 dragPos) {
+    auto paintEdgeDock = [&](ImVec2 pos, ImColor col, bool input, int slotIdx, ImVec2 dragPos) {
 #ifdef IMGUI_NODES_DEBUG
         debug
-            << " connector " << (input ? "input " : "output ") << slotIdx << " pos: "
+            << " edge " << (input ? "input " : "output ") << slotIdx << " pos: "
             << pos.x << ", " << pos.y << std::endl;
 #endif
         draw_list->AddCircleFilled(offset + pos, style.slotRadius, col);
@@ -975,16 +975,16 @@ void NodeArea::EndSlot(NodeState &node, int inputType, int outputType) {
             ImLengthSqr(offset + pos - ImGui::GetMousePos()) <= style.slotMouseRadius * style.slotMouseRadius;
         if (hovered) {
             bool addCircle = true;
-            Mode mode = input ? Mode::DraggingConnectorInput : Mode::DraggingConnectorOutput;
+            Mode mode = input ? Mode::DraggingEdgeInput : Mode::DraggingEdgeOutput;
             if (ImGui::IsMouseDown(0) && !ImGui::IsMouseDragging(0, 1.f) && state.mode == Mode::None) {
                 state.mode = mode;
                 state.dragStart = state.dragEnd = dragPos;
-                state.connectorStartNode = node.id;
-                state.connectorStartSlot = slotIdx;
+                state.edgeStartNode = node.id;
+                state.edgeStartSlot = slotIdx;
             } else {
                 if (mode != state.mode) { // makes sure, we cannot connect input and input or output and output
-                    state.connectorEndNode = node.id;
-                    state.connectorEndSlot = slotIdx;
+                    state.edgeEndNode = node.id;
+                    state.edgeEndSlot = slotIdx;
                 } else {
                     addCircle = false;
                 }
@@ -997,18 +997,18 @@ void NodeArea::EndSlot(NodeState &node, int inputType, int outputType) {
 
     if (inputType != -1) {
         node.inputSlots.push_back({ inputType, absoluteInputPos });
-        paintConnectorDock(relativeInputPos, style.connectorTypeColor.at(inputType), false, (int)node.inputSlots.size() - 1, absoluteInputPos);
+        paintEdgeDock(relativeInputPos, style.edgeTypeColor.at(inputType), false, (int)node.inputSlots.size() - 1, absoluteInputPos);
     }
     if (outputType != -1) {
         node.outputSlots.push_back({ outputType, absoluteOutputPos });
-        paintConnectorDock(relativeOutputPos, style.connectorTypeColor.at(outputType), true, (int)node.outputSlots.size() - 1, absoluteOutputPos);
+        paintEdgeDock(relativeOutputPos, style.edgeTypeColor.at(outputType), true, (int)node.outputSlots.size() - 1, absoluteOutputPos);
     }
 
     draw_list->PopClipRect();
     node.lastCursor = ImGui::GetCursorPos();
 }
 
-bool NodeArea::ConnectNodeSlots(int connectorId, NodeState &sourceNode, int sourceSlot, NodeState &sinkNode, int sinkSlot) {
+bool NodeArea::DrawEdge(int edgeId, NodeState const &sourceNode, int sourceSlot, NodeState const &sinkNode, int sinkSlot) {
     if (sourceNode.outputSlots.size() <= sourceSlot || sinkNode.inputSlots.size() <= sinkSlot)
         return false;
 
@@ -1020,57 +1020,57 @@ bool NodeArea::ConnectNodeSlots(int connectorId, NodeState &sourceNode, int sour
     ImVec2 cp2 = p2 + ImVec2(-50, 0);
 
     if (state.mode == Mode::SelectAll) {
-        state.selectedLinks.addToSelection(connectorId);
+        state.selectedEdges.addToSelection(edgeId);
     }
 
-    bool wouldSelect = handleConnectorDragSelection(*this, connectorId, p1, cp1, cp2, p2);
+    bool wouldSelect = handleEdgeDragSelection(*this, edgeId, p1, cp1, cp2, p2);
 
     p1 += offset; p2 += offset; cp1 += offset; cp2 += offset;
 
     bool hovered = state.outerWindowFocused && ImGui::IsWindowHovered() &&
         closeToBezier(ImGui::GetMousePos(), p1, cp1, cp2, p2, 8.f);
-    if (state.selectedLinks.isSelected(connectorId) || wouldSelect) {
-        draw_list->AddBezierCurve(p1, cp1, cp2, p2, style.connectorSelectedColor, style.connectorSelectedSize);
+    if (state.selectedEdges.isSelected(edgeId) || wouldSelect) {
+        draw_list->AddBezierCurve(p1, cp1, cp2, p2, style.edgeSelectedColor, style.edgeSelectedSize);
     }
 
     int outType = sourceNode.outputSlots[sourceSlot].type;
-    ImColor color = style.connectorInvalid;
-    if (outType >= 0 && outType < (int)style.connectorTypeColor.size()) {
-        color = style.connectorTypeColor.at(outType);
+    ImColor color = style.edgeInvalid;
+    if (outType >= 0 && outType < (int)style.edgeTypeColor.size()) {
+        color = style.edgeTypeColor.at(outType);
     }
     if (hovered && state.mode == Mode::None) {
-        state.hoveredLink = connectorId;
-        color = style.connectorHovered;
+        state.hoveredEdge = edgeId;
+        color = style.edgeHovered;
         if (ImGui::IsMouseClicked(0)) {
             if (!ImGui::GetIO().KeyShift) {
                 clearAllSelections();
             }
-            state.selectedLinks.toggleSelection(connectorId);
+            state.selectedEdges.toggleSelection(edgeId);
         }
     }
 
-    draw_list->AddBezierCurve(p1, cp1, cp2, p2, color, style.connectorSize);
+    draw_list->AddBezierCurve(p1, cp1, cp2, p2, color, style.edgeSize);
 
     return true;
 }
 
-bool NodeArea::GetNewConnection(int *connectorSourceNode, int *connectorSourceNodeSlot, int *connectorSinkNode, int *connectorSinkNodeSlot) const
+bool NodeArea::GetNewEdge(int *edgeSourceNode, int *edgeSourceNodeSlot, int *edgeSinkNode, int *edgeSinkNodeSlot) const
 {
-    if (ImGui::IsMouseReleased(0) && state.connectorStartNode != state.connectorEndNode &&
-        ((state.connectorStartNode != -1 && state.connectorStartSlot != -1) ||
-        (state.connectorEndNode != -1 && state.connectorEndSlot != -1)))
+    if (ImGui::IsMouseReleased(0) && state.edgeStartNode != state.edgeEndNode &&
+        ((state.edgeStartNode != -1 && state.edgeStartSlot != -1) ||
+        (state.edgeEndNode != -1 && state.edgeEndSlot != -1)))
     {
-        if (state.mode == Mode::DraggingConnectorInput) {
-            *connectorSourceNode     = state.connectorStartNode;
-            *connectorSourceNodeSlot = state.connectorStartSlot;
-            *connectorSinkNode       = state.connectorEndNode;
-            *connectorSinkNodeSlot   = state.connectorEndSlot;
+        if (state.mode == Mode::DraggingEdgeInput) {
+            *edgeSourceNode     = state.edgeStartNode;
+            *edgeSourceNodeSlot = state.edgeStartSlot;
+            *edgeSinkNode       = state.edgeEndNode;
+            *edgeSinkNodeSlot   = state.edgeEndSlot;
             return true;
-        } else if(state.mode == Mode::DraggingConnectorOutput) {
-            *connectorSourceNode     = state.connectorEndNode;
-            *connectorSourceNodeSlot = state.connectorEndSlot;
-            *connectorSinkNode       = state.connectorStartNode;
-            *connectorSinkNodeSlot   = state.connectorStartSlot;
+        } else if(state.mode == Mode::DraggingEdgeOutput) {
+            *edgeSourceNode     = state.edgeEndNode;
+            *edgeSourceNodeSlot = state.edgeEndSlot;
+            *edgeSinkNode       = state.edgeStartNode;
+            *edgeSinkNodeSlot   = state.edgeStartSlot;
             return true;
         }
     }
@@ -1110,13 +1110,13 @@ void Style::generate()
 
     selectionFill = ImColor(50, 50, 50, 50);
     selectionBorder = ImColor(255, 255, 255, 150);
-    connectorSize = 3.f;
-    connectorSelectedColor = ImColor(255, 128, 0);
-    connectorSelectedSize = 4.f;
-    connectorDragging = ImColor(255, 128, 0);
-    connectorDraggingSize = 3.f;
-    connectorHovered = ImColor(192, 192, 192);
-    connectorInvalid = ImColor(255, 0, 0);
+    edgeSize = 3.f;
+    edgeSelectedColor = ImColor(255, 128, 0);
+    edgeSelectedSize = 4.f;
+    edgeDragging = ImColor(255, 128, 0);
+    edgeDraggingSize = 3.f;
+    edgeHovered = ImColor(192, 192, 192);
+    edgeInvalid = ImColor(255, 0, 0);
     nodePadding = style.WindowPadding;
     nodeFill = style.Colors[ImGuiCol_WindowBg];
     nodeFillHovered = style.Colors[ImGuiCol_PopupBg];
