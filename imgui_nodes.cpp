@@ -874,7 +874,7 @@ void NodeArea::EndNode(NodeState &node) {
         }
 
         ImGui::SetCursorPos(ImVec2(0.f, 0.f) + style.slotRadius + style.nodePadding);
-        ImGui::InvisibleButton("node", node.size - style.nodePadding*2.f);
+        ImGui::InvisibleButton("node", node.size - style.nodePadding*2.f - 1.f);
         bool itemActive = state.outerWindowFocused && ImGui::IsItemActive();
         bool itemWasActive = state.outerWindowFocused && WasItemActive();
 #ifdef IMGUI_NODES_DEBUG
