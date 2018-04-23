@@ -389,6 +389,14 @@ void paintGrid(Style const &style) {
     }
 }
 
+void invisibleButtonNoResize(const char *name, ImVec2 size)
+{
+    ImGuiWindow* wnd = ImGui::GetCurrentWindow();
+    ImVec2 maxPos = wnd->DC.CursorMaxPos;
+    ImGui::InvisibleButton(name, size);
+    wnd->DC.CursorMaxPos = maxPos;
+}
+
 } // anonymous namespace
 
 void NodeArea::Selection::clearSelection() {
@@ -598,7 +606,8 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
             {
                 actionCallback(UserAction::NewEdge);
                 state.mode = Mode::None;
-            } else if (ImGui::IsMouseReleased(0) || ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Escape)))
+            }
+            else if (ImGui::IsMouseReleased(0) || ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Escape)))
             {
                 state.mode = Mode::None;
             }
@@ -640,7 +649,7 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
 
     paintGrid(style);
 
-    if (ImGui::IsWindowHovered()/* && !ImGui::IsAnyItemHovered()*/) {
+    if (state.outerWindowFocused /*ImGui::IsWindowHovered()/* && !ImGui::IsAnyItemHovered()*/) {
         state.activeNode = -1;
         state.hoveredNode = -1;
         state.hoveredEdge = -1;
@@ -770,8 +779,6 @@ bool NodeArea::BeginNode(NodeState &node, bool resizeable) {
         node.skip = !clip.Overlaps(windowClipRect);
     }
 
-    // put nodes into a separate child window so we can paint them on top 
-    // of edges
     char buf[64];
 #ifdef _MSC_VER
     sprintf_s(buf, "##node%d", node.id);
@@ -788,7 +795,28 @@ bool NodeArea::BeginNode(NodeState &node, bool resizeable) {
     if (oldSkip && !node.skip) {
         ImGui::SetNextWindowSize(node.size + style.slotRadius * 2.f);
     }
-    ImGui::Begin(buf, nullptr, ImGuiWindowFlags_AlwaysAutoResize | /* ImGuiWindowFlags_ShowBorders | */ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
+
+    // Overriding the DisplaySize is a workaround to keep ImGui::CalcSizeAutoFit
+    // from downsizing our nodes if they do not fit our "virtual screen".
+    ImVec2 oldDisplaySize = state.innerContext->IO.DisplaySize;
+    state.innerContext->IO.DisplaySize = ImVec2(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+
+    int wndFlags = 
+        ImGuiWindowFlags_AlwaysAutoResize |
+        // ImGuiWindowFlags_ShowBorders |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoScrollbar |
+        ImGuiWindowFlags_NoScrollWithMouse |
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoSavedSettings;
+
+    // put nodes into a separate "child" window so we can paint them on top of edges
+    ImGui::Begin(buf, nullptr, wndFlags);
+
+    // restore DisplaySize
+    state.innerContext->IO.DisplaySize = oldDisplaySize;
 
     ImGui::PushID(&node);
 
@@ -873,8 +901,8 @@ void NodeArea::EndNode(NodeState &node) {
             }
         }
 
-        ImGui::SetCursorPos(ImVec2(0.f, 0.f) + style.slotRadius + style.nodePadding);
-        ImGui::InvisibleButton("node", node.size - style.nodePadding*2.f - 1.f);
+        ImGui::SetCursorPos(ImVec2() + style.slotRadius);
+        invisibleButtonNoResize("node", node.size);
         bool itemActive = state.outerWindowFocused && ImGui::IsItemActive();
         bool itemWasActive = state.outerWindowFocused && WasItemActive();
 #ifdef IMGUI_NODES_DEBUG
@@ -945,7 +973,7 @@ void NodeArea::BeginSlot(NodeState &node) {
     draw_list->PushClipRect(state.innerWndPos + node.pos, state.innerWndPos + node.pos + ImGui::GetWindowSize());
     node.lastCursor = ImGui::GetCursorPos();
     ImVec2 pos = ImVec2(style.slotRadius, node.lastCursor.y);
-    draw_list->AddLine(offset + pos + ImVec2(style.nodeBorderSize, 0.f), offset + pos + ImVec2(node.size.x - style.nodeBorderSize, 0), style.slotSeparatorColor, style.slotSeparatorSize);
+    draw_list->AddLine(offset + pos + ImVec2(style.nodeBorderSize * 0.5f, 0.f), offset + pos + ImVec2(node.size.x - style.nodeBorderSize, 0), style.slotSeparatorColor, style.slotSeparatorSize);
     draw_list->PopClipRect();
     ImGui::Spacing();
 }
@@ -959,7 +987,9 @@ void NodeArea::EndSlot(NodeState &node, int inputType, int outputType) {
 
     ImVec2 absoluteInputPos = relativeInputPos + node.pos;
     ImVec2 absoluteOutputPos = relativeOutputPos + node.pos;
-    
+
+    ImVec2 slotBoundsMin = ImVec2(style.slotRadius, node.lastCursor.y);
+    ImVec2 slotBoundsMax = ImVec2(slotBoundsMin.x + node.size.x, ImGui::GetCursorPos().y);
     ImVec2 offset = ImGui::GetWindowPos();
 
     auto paintEdgeDock = [&](ImVec2 pos, ImColor col, bool input, int slotIdx, ImVec2 dragPos) {
@@ -970,27 +1000,40 @@ void NodeArea::EndSlot(NodeState &node, int inputType, int outputType) {
 #endif
         draw_list->AddCircleFilled(offset + pos, style.slotRadius, col);
 
-        bool hovered = 
-            state.outerWindowFocused && 
+        bool hovered =
+            state.outerWindowFocused &&
             ImLengthSqr(offset + pos - ImGui::GetMousePos()) <= style.slotMouseRadius * style.slotMouseRadius;
+
+        if (style.newEdgeFromSlot) {
+            ImVec2 oldCursor = ImGui::GetCursorPos();
+            ImGui::SetCursorPos(slotBoundsMin);
+            invisibleButtonNoResize("slot", slotBoundsMax - slotBoundsMin);
+            ImGui::SetCursorPos(oldCursor);
+
+            hovered = hovered || ImGui::IsItemHovered() || ImRect(slotBoundsMin, slotBoundsMax).Contains(ImGui::GetMousePos() - offset);
+        }
         if (hovered) {
-            bool addCircle = true;
             Mode mode = input ? Mode::DraggingEdgeInput : Mode::DraggingEdgeOutput;
+            bool validTarget =
+                (state.mode == Mode::DraggingEdgeInput || state.mode == Mode::DraggingEdgeOutput) &&
+                mode != state.mode &&           // makes sure, we cannot connect input and input or output and output
+                state.edgeStartNode != node.id; // makes sure, we cannot connect inputs and outputs of the same node
+
             if (ImGui::IsMouseDown(0) && !ImGui::IsMouseDragging(0, 1.f) && state.mode == Mode::None) {
                 state.mode = mode;
                 state.dragStart = state.dragEnd = dragPos;
                 state.edgeStartNode = node.id;
                 state.edgeStartSlot = slotIdx;
-            } else {
-                if (mode != state.mode) { // makes sure, we cannot connect input and input or output and output
-                    state.edgeEndNode = node.id;
-                    state.edgeEndSlot = slotIdx;
-                } else {
-                    addCircle = false;
-                }
+            } else if (validTarget) { 
+                state.edgeEndNode = node.id;
+                state.edgeEndSlot = slotIdx;
             }
-            if (addCircle) {
+
+            if (state.mode == Mode::None || validTarget) {
                 draw_list->AddCircle(offset + pos, style.slotRadius, style.slotBorderHovered);
+                if (style.newEdgeFromSlot) {
+                    draw_list->AddRect(offset + slotBoundsMin, offset + slotBoundsMax, style.slotBorderHovered);
+                }
             }
         }
     };
@@ -1009,6 +1052,15 @@ void NodeArea::EndSlot(NodeState &node, int inputType, int outputType) {
 }
 
 bool NodeArea::DrawEdge(int edgeId, NodeState const &sourceNode, int sourceSlot, NodeState const &sinkNode, int sinkSlot) {
+    int outType = sourceNode.outputSlots[sourceSlot].type;
+    ImColor color = style.edgeInvalid;
+    if (outType >= 0 && outType < (int)style.edgeTypeColor.size()) {
+        color = style.edgeTypeColor.at(outType);
+    }
+    return DrawEdge(edgeId, sourceNode, sourceSlot, sinkNode, sinkSlot, color);
+}
+
+bool NodeArea::DrawEdge(int edgeId, NodeState const &sourceNode, int sourceSlot, NodeState const &sinkNode, int sinkSlot, ImColor color) {
     if (sourceNode.outputSlots.size() <= sourceSlot || sinkNode.inputSlots.size() <= sinkSlot)
         return false;
 
@@ -1033,11 +1085,6 @@ bool NodeArea::DrawEdge(int edgeId, NodeState const &sourceNode, int sourceSlot,
         draw_list->AddBezierCurve(p1, cp1, cp2, p2, style.edgeSelectedColor, style.edgeSelectedSize);
     }
 
-    int outType = sourceNode.outputSlots[sourceSlot].type;
-    ImColor color = style.edgeInvalid;
-    if (outType >= 0 && outType < (int)style.edgeTypeColor.size()) {
-        color = style.edgeTypeColor.at(outType);
-    }
     if (hovered && state.mode == Mode::None) {
         state.hoveredEdge = edgeId;
         color = style.edgeHovered;
@@ -1085,6 +1132,11 @@ ImVec2 NodeArea::GetAbsoluteMousePos() const
 ImVec2 NodeArea::GetContentSize(NodeState &node) const
 {
     return node.size - style.slotRadius;
+}
+
+ImVec2 NodeArea::ConvertToNodeAreaPosition(ImVec2 outsidePosition) const
+{
+    return outsidePosition / state.zoom - state.innerWndPos;
 }
 
 #ifdef IMGUI_NODES_DEBUG

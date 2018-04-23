@@ -76,6 +76,8 @@ struct Style {
     ImColor slotSeparatorColor;
     float   slotSeparatorSize;
 
+    bool    newEdgeFromSlot; // enables creating new edges from the whole slot area instead of just from the slot connector circle
+
     std::vector<ImColor> edgeTypeColor;
 
     // todo: sort this vector by descending spacing
@@ -114,6 +116,7 @@ struct Style {
             Grid{ 16, 1.f, ImColor(200, 200, 200, 100) },
             Grid{ 1, 1.f, ImColor(230, 230, 230, 40) }})
         , gridSpacing(16)
+        , newEdgeFromSlot(true)
     {}
 
     void generate();
@@ -195,10 +198,12 @@ struct NodeArea {
     void EndSlot(NodeState &node, int inputType = -1, int outputType = -1);
 
     bool DrawEdge(int edgeId, NodeState const &sourceNode, int sourceSlot, NodeState const &sinkNode, int sinkSlot);
+    bool DrawEdge(int edgeId, NodeState const &sourceNode, int sourceSlot, NodeState const &sinkNode, int sinkSlot, ImColor color);
     bool GetNewEdge(int *edgeSourceNode, int *edgeSourceNodeSlot, int *edgeSinkNode, int *edgeSinkNodeSlot) const;
 
     ImVec2 GetAbsoluteMousePos() const;
     ImVec2 GetContentSize(NodeState &node) const;
+    ImVec2 ConvertToNodeAreaPosition(ImVec2 outsidePosition) const;
 
 #ifdef IMGUI_NODES_DEBUG
     void ShowMetricsWindow(bool* p_open = nullptr);
