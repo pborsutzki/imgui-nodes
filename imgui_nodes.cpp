@@ -895,7 +895,14 @@ void NodeArea::EndNode(NodeState &node) {
         if (state.mode != Mode::ResizingNode) {
             ImVec2 newSize = ImGui::GetWindowSize() - style.slotRadius * 2.f;
             if (newSize != node.size) {
-                node.size = newSize;
+                // The dampening on the size adaptation fixes possible feedback loops
+                // with automatically resizing UI controls and automatically resizing nodes.
+                // Factors closer to one show the jittering longer but the sizes of other nodes
+                // converge faster. Factors closer to zero fix the jittering faster, but with lower
+                // values one can see the nodes grow or shrink slowly.
+                const float sizeAdaptationDampening = 0.75f;
+                node.size += (newSize - node.size) * sizeAdaptationDampening;
+
                 node.forceRedraw = true;
                 state.anySizeChanged = true;
             }
