@@ -498,7 +498,7 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
         state.flags |= NodeAreaFlags_ZoomToFit;
     }
 
-    if (state.outerWindowFocused && state.hoveredNode == -1 && outerIo.MouseWheel != 0.f && state.innerContext->OpenPopupStack.empty()) {
+    if (state.outerWindowHovered && state.hoveredNode == -1 && outerIo.MouseWheel != 0.f && state.innerContext->OpenPopupStack.empty()) {
         const float factor = 1.25f;
         float newZoom = outerIo.MouseWheel > 0 ? (state.zoom * factor) : (state.zoom / factor);
         if (newZoom > 0.15f && newZoom < 16.f) {
@@ -600,9 +600,13 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
         if (state.mode == Mode::DraggingEdgeInput ||
             state.mode == Mode::DraggingEdgeOutput)
         {
-            if (ImGui::IsMouseReleased(0) && state.edgeStartNode != state.edgeEndNode &&
-                ((state.edgeStartNode != -1 && state.edgeStartSlot != -1) ||
-                (state.edgeEndNode != -1 && state.edgeEndSlot != -1)))
+            bool differentStartAndEnd = state.edgeStartNode != state.edgeEndNode;
+            bool startNodeValid = state.edgeStartNode != -1 && state.edgeStartSlot != -1;
+            bool endNodeValid = state.edgeEndNode != -1 && state.edgeEndSlot != -1;
+
+            if (ImGui::IsMouseReleased(0) && differentStartAndEnd &&
+                (startNodeValid || endNodeValid) &&
+                (startNodeValid && endNodeValid || state.hoveredNode == -1))
             {
                 actionCallback(UserAction::NewEdge);
                 state.mode = Mode::None;
@@ -649,13 +653,11 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
 
     paintGrid(style);
 
-    if (state.outerWindowFocused /*ImGui::IsWindowHovered()/* && !ImGui::IsAnyItemHovered()*/) {
-        state.activeNode = -1;
-        state.hoveredNode = -1;
-        state.hoveredEdge = -1;
-        state.edgeEndNode = -1;
-        state.edgeEndSlot = -1;
-    }
+    state.activeNode = -1;
+    state.hoveredNode = -1;
+    state.hoveredEdge = -1;
+    state.edgeEndNode = -1;
+    state.edgeEndSlot = -1;
     state.anySizeChanged = false;
 
     if (state.flags & NodeAreaFlags_ZoomToFit) {
@@ -679,7 +681,6 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
 void NodeArea::EndNodeArea() {
 #ifdef IMGUI_NODES_DEBUG
     debug << "EndNodeArea " << ImGui::IsAnyItemActive() << " " << state.anySizeChanged << std::endl;
-    printf("changed: %s\n", state.anySizeChanged ? "true" : "false");
 #endif
 
     switch (state.mode)
@@ -915,7 +916,7 @@ void NodeArea::EndNode(NodeState &node) {
 #ifdef IMGUI_NODES_DEBUG
         debug << "active: " << itemActive << " was active: " << itemWasActive << std::endl;
 #endif
-        hovered = state.outerWindowHovered && ImGui::IsItemHovered();
+        hovered = state.outerWindowHovered && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
 
         if (itemWasActive && ImGui::IsMouseReleased(0) && state.mode == Mode::None)
         {
@@ -1026,7 +1027,7 @@ void NodeArea::EndSlot(NodeState &node, int inputType, int outputType) {
                 mode != state.mode &&           // makes sure, we cannot connect input and input or output and output
                 state.edgeStartNode != node.id; // makes sure, we cannot connect inputs and outputs of the same node
 
-            if (ImGui::IsMouseDown(0) && !ImGui::IsMouseDragging(0, 1.f) && state.mode == Mode::None) {
+            if (ImGui::IsMouseDown(0) && !ImGui::IsMouseDragging(0, 1.f) && state.mode == Mode::None && ImGui::IsWindowFocused()) {
                 state.mode = mode;
                 state.dragStart = state.dragEnd = dragPos;
                 state.edgeStartNode = node.id;
