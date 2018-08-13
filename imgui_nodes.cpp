@@ -941,7 +941,7 @@ void NodeArea::EndNode(NodeState &node) {
     }
     selected = state.selectedNodes.isSelected(node.id);
 
-    bool canMove = selected || hovered;
+    bool canMove = selected || (hovered && state.mode == Mode::None);
     if (state.mode == Mode::DraggingNodes && canMove && ImGui::GetIO().MouseDelta != ImVec2()) {
         node.posFloat = node.posFloat + ImGui::GetIO().MouseDelta;
         if (ImGui::GetIO().KeyShift) {
