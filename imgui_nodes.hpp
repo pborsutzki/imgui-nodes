@@ -50,67 +50,116 @@ struct Grid {
     ImColor lineColor;
 };
 
+enum StyleColor : uint32_t {
+    Style_SelectionFill = 0,
+    Style_SelectionBorder,
+    Style_EdgeSelectedColor,
+    Style_EdgeDragging,
+    Style_EdgeHovered,
+    Style_EdgeColor,
+    Style_InputEdgeColor,
+    Style_OutputEdgeColor,
+    Style_NodeFill,
+    Style_NodeFillHovered,
+    Style_NodeBorder,
+    Style_NodeBorderSelected,
+    Style_SlotBorderHovered,
+    Style_SlotSeparatorColor,
+    Style_Color_Count_
+};
+
+enum StyleVec2 : uint32_t {
+    Style_NodePadding = 0,
+    Style_Vec2_Count_
+};
+
+enum StyleFloat : uint32_t {
+    Style_EdgeSize = 0,
+    Style_EdgeSelectedSize,
+    Style_EdgeDraggingSize,
+    Style_NodeRounding,
+    Style_NodeBorderSize,
+    Style_SlotRadius,
+    Style_SlotMouseRadius,
+    Style_SlotSeparatorSize,
+    Style_Float_Count_
+};
+
+enum StyleDataType : uint32_t {
+    StyleDataType_Float = 0u << 30,
+    StyleDataType_Vec2  = 1u << 30,
+    StyleDataType_Color = 2u << 30,
+    //StyleDataType_Reserved = 3u << 30,
+    StyleDataType_Mask_ = 3u << 30
+};
+
+struct StyleMod {
+    StyleMod(StyleFloat idx, float f)          : maskedStyleIndex(idx | StyleDataType_Float), f(f) {}
+    StyleMod(StyleVec2  idx, ImVec2 const &v)  : maskedStyleIndex(idx | StyleDataType_Vec2), vec2(v) {}
+    StyleMod(StyleColor idx, ImColor const &c) : maskedStyleIndex(idx | StyleDataType_Color), color(c) {}
+
+    StyleDataType type() const { return (StyleDataType)(maskedStyleIndex & StyleDataType_Mask_); }
+    uint32_t index() const { return maskedStyleIndex & ~StyleDataType_Mask_; }
+
+    uint32_t maskedStyleIndex;
+    union {
+        float f;
+        ImVec2 vec2;
+        ImColor color;
+    };
+};
+
 struct Style {
-    ImColor selectionFill;
-    ImColor selectionBorder;
-
-    float   edgeSize;
-    ImColor edgeSelectedColor;
-    float   edgeSelectedSize;
-    ImColor edgeDragging;
-    float   edgeDraggingSize;
-    ImColor edgeHovered;
-    ImColor edgeInvalid;
-
-    ImVec2  nodePadding;
-    ImColor nodeFill;
-    ImColor nodeFillHovered;
-    ImColor nodeBorder;
-    ImColor nodeBorderSelected;
-    float   nodeRounding;
-    float   nodeBorderSize;
-
-    float   slotRadius;
-    float   slotMouseRadius;
-    ImColor slotBorderHovered;
-    ImColor slotSeparatorColor;
-    float   slotSeparatorSize;
-
-    bool    newEdgeFromSlot; // enables creating new edges from the whole slot area instead of just from the slot connector circle
-
-    std::vector<ImColor> edgeTypeColor;
+    bool newEdgeFromSlot; // enables creating new edges from the whole slot area instead of just from the slot connector circle
 
     // todo: sort this vector by descending spacing
     std::vector<Grid> grid;
     float gridSpacing;
 
+    std::array<float, Style_Float_Count_>   styleFloats;
+    std::array<ImVec2, Style_Vec2_Count_>   styleVec2s;
+    std::array<ImColor, Style_Color_Count_> styleColors;
+    std::vector<StyleMod> styleStack;
+
+    float           operator[](StyleFloat idx) const { return styleFloats[idx]; }
+    ImVec2  const & operator[](StyleVec2  idx) const { return styleVec2s[idx]; }
+    ImColor const & operator[](StyleColor idx) const { return styleColors[idx]; }
+
+    void push(StyleFloat idx, float f);
+    void push(StyleVec2  idx, ImVec2 const &vec2);
+    void push(StyleColor idx, ImColor const &col);
+    void pop(int count = 1);
+
     Style() 
-        : selectionFill(50, 50, 50, 50)
-        , selectionBorder(255, 255, 255, 150)
-        , edgeSize(3.f)
-        , edgeSelectedColor(255, 128, 0)
-        , edgeSelectedSize(4.f)
-        , edgeDragging(255, 128, 0)
-        , edgeDraggingSize(3.f)
-        , edgeHovered(192, 192, 192)
-        , edgeInvalid(255, 0, 0)
-        , nodePadding(8.f, 8.f)
-        , nodeFill(60, 60, 60)
-        , nodeFillHovered(75, 75, 75)
-        , nodeBorder(100, 100, 100)
-        , nodeBorderSelected(255, 128, 0)
-        , nodeRounding(4.f)
-        , nodeBorderSize(2.f)
-        , slotRadius(4.f)
-        , slotMouseRadius(10.f)
-        , slotBorderHovered(255, 128, 0)
-        , slotSeparatorColor(100, 100, 100)
-        , slotSeparatorSize(1.5f)
-        , edgeTypeColor({
-            ImColor(150, 150, 250, 150),
-            ImColor(250, 150, 250, 150),
-            ImColor(250, 250, 150, 150),
-            ImColor(150, 250, 250, 150) })
+        : styleFloats({
+            3.f,  // Style_EdgeSize
+            4.f,  // Style_EdgeSelectedSize
+            3.f,  // Style_EdgeDraggingSize
+            4.f,  // Style_NodeRounding
+            2.f,  // Style_NodeBorderSize
+            4.f,  // Style_SlotRadius
+            10.f, // Style_SlotMouseRadius
+            1.5f  // Style_SlotSeparatorSize
+            })
+        , styleVec2s({{
+            { 8.f, 8.f } // Style_NodePadding
+            }})
+        , styleColors({{
+            {  50,  50,  50,  50 }, // Style_SelectionFill
+            { 255, 255, 255, 150 }, // Style_SelectionBorder
+            { 255, 128,   0, 255 }, // Style_EdgeSelectedColor
+            { 255, 128,   0, 255 }, // Style_EdgeDragging
+            { 192, 192, 192, 255 }, // Style_EdgeHovered
+            { 150, 150, 250, 255 }, // Style_EdgeColor
+            { 150, 150, 250, 150 }, // Style_InputEdgeColor
+            { 150, 150, 250, 150 }, // Style_OutputEdgeColor
+            {  60,  60,  60, 255 }, // Style_NodeFill
+            {  75,  75,  75, 255 }, // Style_NodeFillHovered
+            { 100, 100, 100, 255 }, // Style_NodeBorder
+            { 255, 128,   0, 255 }, // Style_NodeBorderSelected
+            { 255, 128,   0, 255 }, // Style_SlotBorderHovered
+            { 100, 100, 100, 255 }  // Style_SlotSeparatorColor
+            }})
         , grid({
             Grid{ 64, 1.f, ImColor(150, 150, 150, 200) },
             Grid{ 16, 1.f, ImColor(200, 200, 200, 100) },
@@ -198,7 +247,6 @@ struct NodeArea {
     void EndSlot(NodeState &node, int inputType = -1, int outputType = -1);
 
     bool DrawEdge(int edgeId, NodeState const &sourceNode, int sourceSlot, NodeState const &sinkNode, int sinkSlot);
-    bool DrawEdge(int edgeId, NodeState const &sourceNode, int sourceSlot, NodeState const &sinkNode, int sinkSlot, ImColor color);
     bool GetNewEdge(int *edgeSourceNode, int *edgeSourceNodeSlot, int *edgeSinkNode, int *edgeSinkNodeSlot) const;
 
     ImVec2 GetAbsoluteMousePos() const;

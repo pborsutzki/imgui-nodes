@@ -711,8 +711,8 @@ void NodeArea::EndNodeArea() {
     {
         ImDrawList *draw_list = ImGui::GetWindowDrawList();
         ImVec2 offset = ImGui::GetWindowPos();
-        draw_list->AddRectFilled(offset + state.dragStart, offset + state.dragEnd, style.selectionFill);
-        draw_list->AddRect(offset + state.dragStart, offset + state.dragEnd, style.selectionBorder);
+        draw_list->AddRectFilled(offset + state.dragStart, offset + state.dragEnd, style[Style_SelectionFill]);
+        draw_list->AddRect(offset + state.dragStart, offset + state.dragEnd, style[Style_SelectionBorder]);
     }
 
     if (state.mode == Mode::DraggingEdgeInput ||
@@ -726,7 +726,7 @@ void NodeArea::EndNodeArea() {
         ImVec2 p2 = offset + (state.mode == Mode::DraggingEdgeInput ? state.dragEnd : state.dragStart);
         ImVec2 cp2 = p2 + ImVec2(-50, 0);
 
-        draw_list->AddBezierCurve(p1, cp1, cp2, p2, style.edgeDragging, style.edgeDraggingSize);
+        draw_list->AddBezierCurve(p1, cp1, cp2, p2, style[Style_EdgeDragging], style[Style_EdgeDraggingSize]);
     }
 
     state.innerWndPos = ImGui::GetCurrentWindowRead()->Pos;
@@ -771,7 +771,7 @@ bool NodeArea::BeginNode(NodeState &node, bool resizeable) {
 
     if (!node.forceRedraw) {
         ImVec2 origin = state.innerWndPos + node.pos;
-        ImVec2 originAndSize = origin + node.size + style.nodePadding * 2.f + style.slotRadius * 2.f;
+        ImVec2 originAndSize = origin + node.size + style[Style_NodePadding] * 2.f + style[Style_SlotRadius] * 2.f;
         ImRect clip(origin, originAndSize);
 
         ImDrawList* draw_list = ImGui::GetWindowDrawList();
@@ -789,12 +789,12 @@ bool NodeArea::BeginNode(NodeState &node, bool resizeable) {
     
     ImGui::SetNextWindowPos(state.innerWndPos + node.pos);
 
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.nodePadding + style.slotRadius);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style[Style_NodePadding] + style[Style_SlotRadius]);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
 
     if (oldSkip && !node.skip) {
-        ImGui::SetNextWindowSize(node.size + style.slotRadius * 2.f);
+        ImGui::SetNextWindowSize(node.size + style[Style_SlotRadius] * 2.f);
     }
 
     // Overriding the DisplaySize is a workaround to keep ImGui::CalcSizeAutoFit
@@ -834,16 +834,16 @@ bool NodeArea::BeginNode(NodeState &node, bool resizeable) {
     bool selected = state.selectedNodes.isSelected(node.id);
     bool wouldSelect = handleNodeDragSelection(*this, node.id, ImRect(node.pos, node.pos + node.size));
 
-    ImU32 nodeBg = hovered ? style.nodeFillHovered : style.nodeFill;
-    ImU32 nodeBorder = (selected || wouldSelect) ? style.nodeBorderSelected : style.nodeBorder;
+    ImU32 nodeBg = hovered ? style[Style_NodeFillHovered] : style[Style_NodeFill];
+    ImU32 nodeBorder = (selected || wouldSelect) ? style[Style_NodeBorderSelected] : style[Style_NodeBorder];
 
-    ImVec2 offset = ImGui::GetWindowPos() + style.slotRadius;
+    ImVec2 offset = ImGui::GetWindowPos() + style[Style_SlotRadius];
 
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     
     if (resizeable)
     {
-        const float window_rounding = style.nodeRounding;
+        const float window_rounding = style[Style_NodeRounding];
         const float resize_corner_size = ImMax(state.innerContext->FontSize * 1.35f, window_rounding + 1.0f + state.innerContext->FontSize * 0.2f);
         const ImVec2 br = offset + node.size;
         bool resizeHovered, resizeHeld;
@@ -860,20 +860,20 @@ bool NodeArea::BeginNode(NodeState &node, bool resizeable) {
             state.mode = Mode::None;
         }
 
-        draw_list->PathLineTo(br + ImVec2(-resize_corner_size, -style.nodeBorderSize));
-        draw_list->PathLineTo(br + ImVec2(-style.nodeBorderSize, -resize_corner_size));
-        draw_list->PathArcToFast(ImVec2(br.x - window_rounding - style.nodeBorderSize, br.y - window_rounding - style.nodeBorderSize), window_rounding, 0, 3);
+        draw_list->PathLineTo(br + ImVec2(-resize_corner_size, -style[Style_NodeBorderSize]));
+        draw_list->PathLineTo(br + ImVec2(-style[Style_NodeBorderSize], -resize_corner_size));
+        draw_list->PathArcToFast(ImVec2(br.x - window_rounding - style[Style_NodeBorderSize], br.y - window_rounding - style[Style_NodeBorderSize]), window_rounding, 0, 3);
         draw_list->PathFillConvex(resize_col);
     }
 
     draw_list->PushClipRect(state.innerWndPos + node.pos, state.innerWndPos + node.pos + ImGui::GetWindowSize());
 
-    draw_list->AddRectFilled(offset, offset + node.size, nodeBg, style.nodeRounding);
-    draw_list->AddRect(offset, offset + node.size, nodeBorder, style.nodeRounding, -1, style.nodeBorderSize);
+    draw_list->AddRectFilled(offset, offset + node.size, nodeBg, style[Style_NodeRounding]);
+    draw_list->AddRect(offset, offset + node.size, nodeBorder, style[Style_NodeRounding], -1, style[Style_NodeBorderSize]);
 
     draw_list->PopClipRect();
 
-    ImGui::SetCursorPos(ImVec2(0.f, 0.f) + style.slotRadius + style.nodePadding);
+    ImGui::SetCursorPos(ImVec2(0.f, 0.f) + style[Style_SlotRadius] + style[Style_NodePadding]);
 
     ImGui::BeginGroup(); // Lock horizontal position
 
@@ -894,7 +894,7 @@ void NodeArea::EndNode(NodeState &node) {
         ImGui::EndGroup();
 
         if (state.mode != Mode::ResizingNode) {
-            ImVec2 newSize = ImGui::GetWindowSize() - style.slotRadius * 2.f;
+            ImVec2 newSize = ImGui::GetWindowSize() - style[Style_SlotRadius] * 2.f;
             if (newSize != node.size) {
                 // The dampening on the size adaptation fixes possible feedback loops
                 // with automatically resizing UI controls and automatically resizing nodes.
@@ -909,7 +909,7 @@ void NodeArea::EndNode(NodeState &node) {
             }
         }
 
-        ImGui::SetCursorPos(ImVec2() + style.slotRadius);
+        ImGui::SetCursorPos(ImVec2() + style[Style_SlotRadius]);
         invisibleButtonNoResize("node", node.size);
         bool itemActive = state.outerWindowFocused && ImGui::IsItemActive();
         bool itemWasActive = state.outerWindowFocused && WasItemActive();
@@ -950,7 +950,7 @@ void NodeArea::EndNode(NodeState &node) {
             node.pos = ImVec2(
                 floor((node.posFloat.x) / state.snapGrid) * state.snapGrid,
                 floor((node.posFloat.y) / state.snapGrid) * state.snapGrid
-            ) - style.edgeSize;
+            ) - style[Style_EdgeSize];
         }
         node.forceRedraw = true;
     } else if (state.mode == Mode::None) {
@@ -960,7 +960,7 @@ void NodeArea::EndNode(NodeState &node) {
         node.posFloat = node.pos = ImVec2(
             floor((node.posFloat.x) / state.snapGrid) * state.snapGrid,
             floor((node.posFloat.y) / state.snapGrid) * state.snapGrid
-        ) - style.edgeSize;
+        ) - style[Style_EdgeSize];
         node.forceRedraw = true;
     }
     if (state.flags & NodeAreaFlags_ZoomToFit) {
@@ -980,8 +980,11 @@ void NodeArea::BeginSlot(NodeState &node) {
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     draw_list->PushClipRect(state.innerWndPos + node.pos, state.innerWndPos + node.pos + ImGui::GetWindowSize());
     node.lastCursor = ImGui::GetCursorPos();
-    ImVec2 pos = ImVec2(style.slotRadius, node.lastCursor.y);
-    draw_list->AddLine(offset + pos + ImVec2(style.nodeBorderSize * 0.5f, 0.f), offset + pos + ImVec2(node.size.x - style.nodeBorderSize, 0), style.slotSeparatorColor, style.slotSeparatorSize);
+    ImVec2 pos = ImVec2(style[Style_SlotRadius], node.lastCursor.y);
+    draw_list->AddLine(
+        offset + pos + ImVec2(style[Style_NodeBorderSize] * 0.5f, 0.f),
+        offset + pos + ImVec2(node.size.x - style[Style_NodeBorderSize], 0),
+        style[Style_SlotSeparatorColor], style[Style_SlotSeparatorSize]);
     draw_list->PopClipRect();
     ImGui::Spacing();
 }
@@ -990,13 +993,13 @@ void NodeArea::EndSlot(NodeState &node, int inputType, int outputType) {
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     draw_list->PushClipRect(state.innerWndPos + node.pos, state.innerWndPos + node.pos + ImGui::GetWindowSize());
 
-    ImVec2 relativeInputPos = ImVec2(style.slotRadius, node.lastCursor.y + (ImGui::GetCursorPos().y - node.lastCursor.y) / 2.f);
+    ImVec2 relativeInputPos = ImVec2(style[Style_SlotRadius], node.lastCursor.y + (ImGui::GetCursorPos().y - node.lastCursor.y) / 2.f);
     ImVec2 relativeOutputPos = relativeInputPos + ImVec2(node.size.x, 0);
 
     ImVec2 absoluteInputPos = relativeInputPos + node.pos;
     ImVec2 absoluteOutputPos = relativeOutputPos + node.pos;
 
-    ImVec2 slotBoundsMin = ImVec2(style.slotRadius, node.lastCursor.y);
+    ImVec2 slotBoundsMin = ImVec2(style[Style_SlotRadius], node.lastCursor.y);
     ImVec2 slotBoundsMax = ImVec2(slotBoundsMin.x + node.size.x, ImGui::GetCursorPos().y);
     ImVec2 offset = ImGui::GetWindowPos();
 
@@ -1006,11 +1009,11 @@ void NodeArea::EndSlot(NodeState &node, int inputType, int outputType) {
             << " edge " << (input ? "input " : "output ") << slotIdx << " pos: "
             << pos.x << ", " << pos.y << std::endl;
 #endif
-        draw_list->AddCircleFilled(offset + pos, style.slotRadius, col);
+        draw_list->AddCircleFilled(offset + pos, style[Style_SlotRadius], col);
 
         bool hovered =
             state.outerWindowFocused &&
-            ImLengthSqr(offset + pos - ImGui::GetMousePos()) <= style.slotMouseRadius * style.slotMouseRadius;
+            ImLengthSqr(offset + pos - ImGui::GetMousePos()) <= style[Style_SlotMouseRadius] * style[Style_SlotMouseRadius];
 
         if (style.newEdgeFromSlot) {
             ImVec2 oldCursor = ImGui::GetCursorPos();
@@ -1038,9 +1041,9 @@ void NodeArea::EndSlot(NodeState &node, int inputType, int outputType) {
             }
 
             if (state.mode == Mode::None || validTarget) {
-                draw_list->AddCircle(offset + pos, style.slotRadius, style.slotBorderHovered);
+                draw_list->AddCircle(offset + pos, style[Style_SlotRadius], style[Style_SlotBorderHovered]);
                 if (style.newEdgeFromSlot) {
-                    draw_list->AddRect(offset + slotBoundsMin, offset + slotBoundsMax, style.slotBorderHovered);
+                    draw_list->AddRect(offset + slotBoundsMin, offset + slotBoundsMax, style[Style_SlotBorderHovered]);
                 }
             }
         }
@@ -1048,11 +1051,11 @@ void NodeArea::EndSlot(NodeState &node, int inputType, int outputType) {
 
     if (inputType != -1) {
         node.inputSlots.push_back({ inputType, absoluteInputPos });
-        paintEdgeDock(relativeInputPos, style.edgeTypeColor.at(inputType), false, (int)node.inputSlots.size() - 1, absoluteInputPos);
+        paintEdgeDock(relativeInputPos, style[Style_InputEdgeColor], false, (int)node.inputSlots.size() - 1, absoluteInputPos);
     }
     if (outputType != -1) {
         node.outputSlots.push_back({ outputType, absoluteOutputPos });
-        paintEdgeDock(relativeOutputPos, style.edgeTypeColor.at(outputType), true, (int)node.outputSlots.size() - 1, absoluteOutputPos);
+        paintEdgeDock(relativeOutputPos, style[Style_OutputEdgeColor], true, (int)node.outputSlots.size() - 1, absoluteOutputPos);
     }
 
     draw_list->PopClipRect();
@@ -1060,15 +1063,6 @@ void NodeArea::EndSlot(NodeState &node, int inputType, int outputType) {
 }
 
 bool NodeArea::DrawEdge(int edgeId, NodeState const &sourceNode, int sourceSlot, NodeState const &sinkNode, int sinkSlot) {
-    int outType = sourceNode.outputSlots[sourceSlot].type;
-    ImColor color = style.edgeInvalid;
-    if (outType >= 0 && outType < (int)style.edgeTypeColor.size()) {
-        color = style.edgeTypeColor.at(outType);
-    }
-    return DrawEdge(edgeId, sourceNode, sourceSlot, sinkNode, sinkSlot, color);
-}
-
-bool NodeArea::DrawEdge(int edgeId, NodeState const &sourceNode, int sourceSlot, NodeState const &sinkNode, int sinkSlot, ImColor color) {
     if (sourceNode.outputSlots.size() <= sourceSlot || sinkNode.inputSlots.size() <= sinkSlot)
         return false;
 
@@ -1090,12 +1084,13 @@ bool NodeArea::DrawEdge(int edgeId, NodeState const &sourceNode, int sourceSlot,
     bool hovered = state.outerWindowFocused && ImGui::IsWindowHovered() &&
         closeToBezier(ImGui::GetMousePos(), p1, cp1, cp2, p2, 8.f);
     if (state.selectedEdges.isSelected(edgeId) || wouldSelect) {
-        draw_list->AddBezierCurve(p1, cp1, cp2, p2, style.edgeSelectedColor, style.edgeSelectedSize);
+        draw_list->AddBezierCurve(p1, cp1, cp2, p2, style[Style_EdgeSelectedColor], style[Style_EdgeSelectedSize]);
     }
 
+    ImColor color = style[Style_EdgeColor];
     if (hovered && state.mode == Mode::None) {
         state.hoveredEdge = edgeId;
-        color = style.edgeHovered;
+        color = style[Style_EdgeHovered];
         if (ImGui::IsMouseClicked(0)) {
             if (!ImGui::GetIO().KeyShift) {
                 clearAllSelections();
@@ -1104,7 +1099,7 @@ bool NodeArea::DrawEdge(int edgeId, NodeState const &sourceNode, int sourceSlot,
         }
     }
 
-    draw_list->AddBezierCurve(p1, cp1, cp2, p2, color, style.edgeSize);
+    draw_list->AddBezierCurve(p1, cp1, cp2, p2, color, style[Style_EdgeSize]);
 
     return true;
 }
@@ -1139,7 +1134,7 @@ ImVec2 NodeArea::GetAbsoluteMousePos() const
 
 ImVec2 NodeArea::GetContentSize(NodeState &node) const
 {
-    return node.size - style.slotRadius;
+    return node.size - style[Style_SlotRadius];
 }
 
 ImVec2 NodeArea::ConvertToNodeAreaPosition(ImVec2 outsidePosition) const
@@ -1164,30 +1159,74 @@ std::stringstream& NodeArea::Debug()
 }
 #endif
 
+void Style::push(StyleFloat idx, float f)
+{
+    styleStack.emplace_back(idx, styleFloats[idx]);
+    styleFloats[idx] = f;
+}
+
+void Style::push(StyleVec2 idx, ImVec2 const &vec2)
+{
+    styleStack.emplace_back(idx, styleVec2s[idx]);
+    styleVec2s[idx] = vec2;
+}
+
+void Style::push(StyleColor idx, ImColor const &col)
+{
+    styleStack.emplace_back(idx, styleColors[idx]);
+    styleColors[idx] = col;
+}
+
+void Style::pop(int count)
+{
+    while (count-- > 0) {
+        IM_ASSERT(styleStack.size() > 0);
+        uint32_t idx = styleStack.back().index();
+        switch (styleStack.back().type()) {
+        case StyleDataType_Float: styleFloats[idx] = styleStack.back().f; break;
+        case StyleDataType_Vec2: styleVec2s[idx] = styleStack.back().vec2; break;
+        case StyleDataType_Color: styleColors[idx] = styleStack.back().color; break;
+        default: IM_ASSERT(false); break;
+        }
+        styleStack.pop_back();
+    }
+}
+
 void Style::generate()
 {
     ImGuiStyle const& style = ImGui::GetStyle();
 
-    selectionFill = ImColor(50, 50, 50, 50);
-    selectionBorder = ImColor(255, 255, 255, 150);
-    edgeSize = 3.f;
-    edgeSelectedColor = ImColor(255, 128, 0);
-    edgeSelectedSize = 4.f;
-    edgeDragging = ImColor(255, 128, 0);
-    edgeDraggingSize = 3.f;
-    edgeHovered = ImColor(192, 192, 192);
-    edgeInvalid = ImColor(255, 0, 0);
-    nodePadding = style.WindowPadding;
-    nodeFill = style.Colors[ImGuiCol_WindowBg];
-    nodeFillHovered = style.Colors[ImGuiCol_PopupBg];
-    nodeBorder = style.Colors[ImGuiCol_Border];
-    nodeBorderSelected = style.Colors[ImGuiCol_FrameBgActive];
-    nodeRounding = style.WindowRounding;
-    nodeBorderSize = 2.f;
-    slotRadius = 4.f;
-    slotMouseRadius = 6.f;
-    slotBorderHovered = ImColor(255, 128, 0);
-    slotSeparatorColor = style.Colors[ImGuiCol_Separator];
+    styleFloats = {
+        3.f,  // Style_EdgeSize
+        4.f,  // Style_EdgeSelectedSize
+        3.f,  // Style_EdgeDraggingSize
+        style.WindowRounding,  // Style_NodeRounding
+        2.f,  // Style_NodeBorderSize
+        4.f,  // Style_SlotRadius
+        10.f, // Style_SlotMouseRadius
+        1.5f  // Style_SlotSeparatorSize
+    };
+
+    styleVec2s = { {
+        style.WindowPadding // Style_NodePadding
+    } };
+
+    styleColors = { {
+        {  50,  50,  50,  50 }, //Style_SelectionFill
+        { 255, 255, 255, 150 }, //Style_SelectionBorder
+        { 255, 128,   0, 255 }, //Style_EdgeSelectedColor
+        { 255, 128,   0, 255 }, //Style_EdgeDragging
+        { 192, 192, 192, 255 }, //Style_EdgeHovered
+        { 150, 150, 250, 255 }, //Style_EdgeColor
+        { 150, 150, 250, 150 }, //Style_InputEdgeColor
+        { 150, 150, 250, 150 }, //Style_OutputEdgeColor
+        style.Colors[ImGuiCol_WindowBg], //Style_NodeFill
+        style.Colors[ImGuiCol_PopupBg], //Style_NodeFillHovered
+        style.Colors[ImGuiCol_Border], //Style_NodeBorder
+        style.Colors[ImGuiCol_FrameBgActive], //Style_NodeBorderSelected
+        { 255, 128,   0, 255 }, //Style_SlotBorderHovered
+        style.Colors[ImGuiCol_Separator]  //Style_SlotSeparatorColor
+    } };
 
     grid = {
         Grid{ 64, 1.f, ImColor(150, 150, 150, 200) },
