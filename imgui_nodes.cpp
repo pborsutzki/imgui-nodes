@@ -84,7 +84,7 @@ std::array<float, 3> cubicRoots(ImVec4 const &P)
     float A = P.y / P.x;
     float B = P.z / P.x;
     float C = P.w / P.x;
-    
+
     float Q = (3.f * B - pow(A, 2.f)) / 9.f;
     float R = (9.f * A*B - 27.f * C - 2.f * pow(A, 3.f)) / 54.f;
     float D = pow(Q, 3.f) + pow(R, 2.f);  // polynomial discriminant
@@ -99,7 +99,7 @@ std::array<float, 3> cubicRoots(ImVec4 const &P)
         t[0] = -A / 3.f + (S + T);                  // real root
         t[1] = -A / 3.f - (S + T) / 2.f;            // real part of complex root
         t[2] = -A / 3.f - (S + T) / 2.f;            // real part of complex root
-        float Im = abs(sqrt(3.f)*(S - T) / 2.f);    // complex part of root pair   
+        float Im = abs(sqrt(3.f)*(S - T) / 2.f);    // complex part of root pair
 
                                                     /*discard complex roots*/
         if (Im != 0.f)
@@ -240,14 +240,17 @@ bool handleEdgeDragSelection(NodeArea &area, int edgeId, const ImVec2& p1, const
 }
 
 ImGuiContext* setupInnerContext(ImGuiContext* outerContext) {
-    ImGuiContext *innerContext = ImGui::CreateContext(outerContext->IO.MemAllocFn, outerContext->IO.MemFreeFn);
+    ImGuiContext *innerContext = ImGui::CreateContext(outerContext->IO.Fonts);
 
     memcpy(innerContext->IO.KeyMap, outerContext->IO.KeyMap, ImGuiKey_COUNT * sizeof(int));
 
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     innerContext->IO.RenderDrawListsFn = nullptr;
+#endif
     innerContext->IO.SetClipboardTextFn = outerContext->IO.SetClipboardTextFn;
     innerContext->IO.GetClipboardTextFn = outerContext->IO.GetClipboardTextFn;
     innerContext->IO.ClipboardUserData = outerContext->IO.ClipboardUserData;
+    innerContext->IO.ImeSetInputScreenPosFn = outerContext->IO.ImeSetInputScreenPosFn;
     innerContext->IO.ImeWindowHandle = outerContext->IO.ImeWindowHandle;
     innerContext->Style = outerContext->Style;
     return innerContext;
@@ -273,12 +276,16 @@ void innerContextNewFrame(ImGuiContext const* outerContext, ImGuiContext* innerC
 
     if (active) {
         innerIo.MouseWheel = outerIo.MouseWheel;
-        memcpy(innerContext->IO.KeysDown, outerContext->IO.KeysDown, sizeof(outerContext->IO.KeysDown));
-        memcpy(innerContext->IO.InputCharacters, outerContext->IO.InputCharacters, sizeof(outerContext->IO.InputCharacters));
+        innerIo.MouseWheelH = outerIo.MouseWheelH;
+        memcpy(innerIo.KeysDown, outerIo.KeysDown, sizeof(innerIo.KeysDown));
+        memcpy(innerIo.NavInputs, outerIo.NavInputs, sizeof(innerIo.NavInputs));
+        innerIo.InputQueueCharacters = outerIo.InputQueueCharacters;
     } else {
         innerIo.MouseWheel = 0.f;
-        memset(innerContext->IO.KeysDown, 0, sizeof(innerContext->IO.KeysDown));
-        memset(innerContext->IO.InputCharacters, 0, sizeof(innerContext->IO.InputCharacters));
+        innerIo.MouseWheelH = 0.f;
+        memset(innerIo.KeysDown, 0, sizeof(innerIo.KeysDown));
+        memset(innerIo.NavInputs, 0, sizeof(innerIo.NavInputs));
+        innerIo.InputQueueCharacters.clear();
     }
 
     innerContext->IO.KeyCtrl = outerContext->IO.KeyCtrl;
@@ -288,6 +295,7 @@ void innerContextNewFrame(ImGuiContext const* outerContext, ImGuiContext* innerC
 }
 
 void copyTransformDrawList(ImDrawList *targetDrawList, ImDrawList *sourceDrawList, ImVec2 scale = ImVec2(1.f, 1.f), ImVec2 translate = {}) {
+    targetDrawList->Flags = sourceDrawList->Flags;
     ImRect targetClip(targetDrawList->_ClipRectStack.back());
     int indexBase = targetDrawList->_VtxCurrentIdx;
 
@@ -522,7 +530,7 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
 #ifdef IMGUI_ANTIALIASFRINGESCALE
     ImGui::PushStyleVar(ImGuiStyleVar_AntiAliasFringeScale, state.innerContext->Style.AntiAliasFringeScale / state.zoom);
 #endif
-    ImGui::SetNextWindowPos(state.innerWndPos, setWindowPos ? ImGuiSetCond_Always : ImGuiSetCond_Once);
+    ImGui::SetNextWindowPos(state.innerWndPos, setWindowPos ? ImGuiCond_Always : ImGuiCond_Once);
     ImGui::SetNextWindowSize(state.nodeAreaSize);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4());
     int wndFlags =
@@ -545,7 +553,7 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
     }
     if (state.outerWindowFocused && state.scrolling && ImGui::IsMouseDragging(2, 0.0f)) {
         ImGui::ClearActiveID();
-        ImGui::SetWindowPos(ImGui::GetCurrentWindowRead()->PosFloat + ImGui::GetIO().MouseDelta);
+        ImGui::SetWindowPos(ImGui::GetCurrentWindowRead()->Pos + ImGui::GetIO().MouseDelta);
     } else {
         state.scrolling = false;
     }
@@ -645,7 +653,7 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
         }
     }
 
-    ImVec2 unclampedPos = ImGui::GetCurrentWindowRead()->PosFloat;
+    ImVec2 unclampedPos = ImGui::GetCurrentWindowRead()->Pos;
     ImVec2 clampedPos = ImClamp(unclampedPos, -ImGui::GetWindowSize() + windowSize, ImVec2());
     if (unclampedPos != clampedPos) {
         ImGui::SetWindowPos(clampedPos);
@@ -668,10 +676,10 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
     }
 
 #ifdef IMGUI_NODES_DEBUG
-    debug 
-        << "BeginNodeArea " << ImGui::IsAnyItemActive() 
-        << " scrolling " << state.scrolling 
-        << " mpos: " << ImGui::GetMousePos().x << ", " << ImGui::GetMousePos().y 
+    debug
+        << "BeginNodeArea " << ImGui::IsAnyItemActive()
+        << " scrolling " << state.scrolling
+        << " mpos: " << ImGui::GetMousePos().x << ", " << ImGui::GetMousePos().y
         << " abs " << (ImGui::GetWindowPos() + ImGui::GetMousePos()).x << ", " << (ImGui::GetWindowPos() + ImGui::GetMousePos()).y
         << " hovered " << ImGui::IsWindowHovered()
         << std::endl;
@@ -750,7 +758,7 @@ void NodeArea::EndNodeArea() {
         floor(fmodf(state.innerWndPos.x, 1.f) * state.zoom),
         floor(fmodf(state.innerWndPos.y, 1.f) * state.zoom));
 
-    ImVec2 translate = state.outerContext->CurrentWindow->PosFloat + fractInnerWndPos;
+    ImVec2 translate = state.outerContext->CurrentWindow->Pos + fractInnerWndPos;
     ImVec2 scale = ImVec2(state.zoom, state.zoom);
 
     copyTransformDrawCmds(innerDrawData, scale, translate);
@@ -786,7 +794,7 @@ bool NodeArea::BeginNode(NodeState &node, bool resizeable) {
 #else
     sprintf(buf, "##node%d", node.id);
 #endif
-    
+
     ImGui::SetNextWindowPos(state.innerWndPos + node.pos);
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style[Style_NodePadding] + style[Style_SlotRadius]);
@@ -802,7 +810,7 @@ bool NodeArea::BeginNode(NodeState &node, bool resizeable) {
     ImVec2 oldDisplaySize = state.innerContext->IO.DisplaySize;
     state.innerContext->IO.DisplaySize = ImVec2(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 
-    int wndFlags = 
+    int wndFlags =
         ImGuiWindowFlags_AlwaysAutoResize |
         // ImGuiWindowFlags_ShowBorders |
         ImGuiWindowFlags_NoResize |
@@ -840,7 +848,7 @@ bool NodeArea::BeginNode(NodeState &node, bool resizeable) {
     ImVec2 offset = ImGui::GetWindowPos() + style[Style_SlotRadius];
 
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    
+
     if (resizeable)
     {
         const float window_rounding = style[Style_NodeRounding];
@@ -850,7 +858,7 @@ bool NodeArea::BeginNode(NodeState &node, bool resizeable) {
 
         const ImRect resize_rect(br - ImFloor(ImVec2(resize_corner_size * 0.75f, resize_corner_size * 0.75f)), br);
         const ImGuiID resize_id = ImGui::GetID(&node);
-        ImGui::ButtonBehavior(resize_rect, resize_id, &resizeHovered, &resizeHeld, ImGuiButtonFlags_FlattenChilds);
+        ImGui::ButtonBehavior(resize_rect, resize_id, &resizeHovered, &resizeHeld, ImGuiButtonFlags_FlattenChildren);
         ImU32 resize_col = ImGui::GetColorU32(resizeHeld ? ImGuiCol_ResizeGripActive : resizeHovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
 
         if (resizeHeld && (state.mode == Mode::None || state.mode == Mode::ResizingNode)) {
@@ -955,7 +963,7 @@ void NodeArea::EndNode(NodeState &node) {
         node.forceRedraw = true;
     } else if (state.mode == Mode::None) {
         node.posFloat = node.pos;
-    } 
+    }
     if (state.flags & NodeAreaFlags_SnapToGrid) {
         node.posFloat = node.pos = ImVec2(
             floor((node.posFloat.x) / state.snapGrid) * state.snapGrid,
@@ -1035,7 +1043,7 @@ void NodeArea::EndSlot(NodeState &node, int inputType, int outputType) {
                 state.dragStart = state.dragEnd = dragPos;
                 state.edgeStartNode = node.id;
                 state.edgeStartSlot = slotIdx;
-            } else if (validTarget) { 
+            } else if (validTarget) {
                 state.edgeEndNode = node.id;
                 state.edgeEndSlot = slotIdx;
             }
@@ -1235,7 +1243,7 @@ void Style::generate()
 }
 
 
-NodeState::NodeState(int id, ImVec2 initialPos) 
+NodeState::NodeState(int id, ImVec2 initialPos)
     : id(id)
     , pos(initialPos)
     , posFloat(initialPos)

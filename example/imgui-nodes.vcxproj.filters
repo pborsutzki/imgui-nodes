@@ -39,14 +39,20 @@
     <ClCompile Include="..\imgui\imgui_draw.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
-    <ClCompile Include="..\imgui\examples\opengl3_example\imgui_impl_glfw_gl3.cpp">
-      <Filter>glfw3_gl3</Filter>
-    </ClCompile>
     <ClCompile Include="..\imgui\examples\libs\gl3w\GL\gl3w.c">
       <Filter>gl3w</Filter>
     </ClCompile>
     <ClCompile Include="..\cubicSpline\CubicSpline.cpp">
       <Filter>cubicSpline</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui\examples\imgui_impl_glfw.cpp">
+      <Filter>glfw3_gl3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui\imgui_widgets.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui\examples\imgui_impl_opengl3.cpp">
+      <Filter>imgui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -62,9 +68,6 @@
     <ClInclude Include="..\imgui\imgui_internal.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="..\imgui\examples\opengl3_example\imgui_impl_glfw_gl3.h">
-      <Filter>glfw3_gl3</Filter>
-    </ClInclude>
     <ClInclude Include="..\imgui\examples\libs\gl3w\GL\gl3w.h">
       <Filter>gl3w</Filter>
     </ClInclude>
@@ -77,6 +80,12 @@
     <ClInclude Include="..\cubicSpline\CubicSplineHelpers.h">
       <Filter>cubicSpline</Filter>
     </ClInclude>
+    <ClInclude Include="..\imgui\examples\imgui_impl_glfw.h">
+      <Filter>glfw3_gl3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui\examples\imgui_impl_opengl3.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\cubicSpline\CubicSplineHelpers.inl">
@@ -85,5 +94,10 @@
     <None Include="..\cubicSpline\CubicSplineSimd.inl">
       <Filter>cubicSpline</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="..\imgui\misc\natvis\imgui.natvis">
+      <Filter>imgui</Filter>
+    </Natvis>
   </ItemGroup>
 </Project>

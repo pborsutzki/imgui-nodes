@@ -20,11 +20,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\cubicSpline\CubicSpline.cpp" />
+    <ClCompile Include="..\imgui\examples\imgui_impl_glfw.cpp" />
+    <ClCompile Include="..\imgui\examples\imgui_impl_opengl3.cpp" />
     <ClCompile Include="..\imgui\examples\libs\gl3w\GL\gl3w.c" />
-    <ClCompile Include="..\imgui\examples\opengl3_example\imgui_impl_glfw_gl3.cpp" />
     <ClCompile Include="..\imgui\imgui.cpp" />
     <ClCompile Include="..\imgui\imgui_demo.cpp" />
     <ClCompile Include="..\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\imgui\imgui_widgets.cpp" />
     <ClCompile Include="..\imgui_nodes.cpp" />
     <ClCompile Include="imgui_nodes_example.cpp" />
     <ClCompile Include="main.cpp" />
@@ -32,9 +34,10 @@
   <ItemGroup>
     <ClInclude Include="..\cubicSpline\CubicSpline.h" />
     <ClInclude Include="..\cubicSpline\CubicSplineHelpers.h" />
+    <ClInclude Include="..\imgui\examples\imgui_impl_glfw.h" />
+    <ClInclude Include="..\imgui\examples\imgui_impl_opengl3.h" />
     <ClInclude Include="..\imgui\examples\libs\gl3w\GL\gl3w.h" />
     <ClInclude Include="..\imgui\examples\libs\gl3w\GL\glcorearb.h" />
-    <ClInclude Include="..\imgui\examples\opengl3_example\imgui_impl_glfw_gl3.h" />
     <ClInclude Include="..\imgui\imconfig.h" />
     <ClInclude Include="..\imgui\imgui.h" />
     <ClInclude Include="..\imgui\imgui_internal.h" />
@@ -43,6 +46,9 @@
   <ItemGroup>
     <None Include="..\cubicSpline\CubicSplineHelpers.inl" />
     <None Include="..\cubicSpline\CubicSplineSimd.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="..\imgui\misc\natvis\imgui.natvis" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
@@ -101,7 +107,7 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)/../;$(SolutionDir)/../cubicSpline/;$(SolutionDir)/../imgui/;$(SolutionDir)/../imgui/examples/libs/gl3w;$(SolutionDir)/../imgui/examples/libs/glfw/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)/../;$(SolutionDir)/../cubicSpline/;$(SolutionDir)/../imgui/;$(SolutionDir)/../imgui/examples;$(SolutionDir)/../imgui/examples/libs/gl3w;$(SolutionDir)/../imgui/examples/libs/glfw/include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -114,7 +120,7 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)/../;$(SolutionDir)/../cubicSpline/;$(SolutionDir)/../imgui/;$(SolutionDir)/../imgui/examples/libs/gl3w;$(SolutionDir)/../imgui/examples/libs/glfw/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)/../;$(SolutionDir)/../cubicSpline/;$(SolutionDir)/../imgui/;$(SolutionDir)/../imgui/examples;$(SolutionDir)/../imgui/examples/libs/gl3w;$(SolutionDir)/../imgui/examples/libs/glfw/include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -129,7 +135,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)/../;$(SolutionDir)/../cubicSpline/;$(SolutionDir)/../imgui/;$(SolutionDir)/../imgui/examples/libs/gl3w;$(SolutionDir)/../imgui/examples/libs/glfw/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)/../;$(SolutionDir)/../cubicSpline/;$(SolutionDir)/../imgui/;$(SolutionDir)/../imgui/examples;$(SolutionDir)/../imgui/examples/libs/gl3w;$(SolutionDir)/../imgui/examples/libs/glfw/include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -146,7 +152,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)/../;$(SolutionDir)/../cubicSpline/;$(SolutionDir)/../imgui/;$(SolutionDir)/../imgui/examples/libs/gl3w;$(SolutionDir)/../imgui/examples/libs/glfw/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)/../;$(SolutionDir)/../cubicSpline/;$(SolutionDir)/../imgui/;$(SolutionDir)/../imgui/examples;$(SolutionDir)/../imgui/examples/libs/gl3w;$(SolutionDir)/../imgui/examples/libs/glfw/include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
