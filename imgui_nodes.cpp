@@ -966,8 +966,8 @@ void NodeArea::EndNode(NodeState &node) {
     }
     if (state.flags & NodeAreaFlags_SnapToGrid) {
         node.posFloat = node.pos = ImVec2(
-            floor((node.posFloat.x) / state.snapGrid) * state.snapGrid,
-            floor((node.posFloat.y) / state.snapGrid) * state.snapGrid
+            floor((node.pos.x) / state.snapGrid) * state.snapGrid,
+            floor((node.pos.y) / state.snapGrid) * state.snapGrid
         ) - style[Style_EdgeSize];
         node.forceRedraw = true;
     }
