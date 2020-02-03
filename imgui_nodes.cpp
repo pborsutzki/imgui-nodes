@@ -1023,13 +1023,17 @@ void NodeArea::EndSlot(NodeState &node, int inputType, int outputType) {
             state.outerWindowFocused &&
             ImLengthSqr(offset + pos - ImGui::GetMousePos()) <= style[Style_SlotMouseRadius] * style[Style_SlotMouseRadius];
 
+        bool anotherItemIsActive = false;
         if (style.newEdgeFromSlot) {
+            anotherItemIsActive = ImGui::IsAnyItemActive();
             ImVec2 oldCursor = ImGui::GetCursorPos();
             ImGui::SetCursorPos(slotBoundsMin);
             invisibleButtonNoResize("slot", slotBoundsMax - slotBoundsMin);
             ImGui::SetCursorPos(oldCursor);
 
-            hovered = hovered || ImGui::IsItemHovered() || ImRect(slotBoundsMin, slotBoundsMax).Contains(ImGui::GetMousePos() - offset);
+            hovered = hovered
+                || ImGui::IsItemHovered()
+                || ImRect(slotBoundsMin, slotBoundsMax).Contains(ImGui::GetMousePos() - offset);
         }
         if (hovered) {
             Mode mode = input ? Mode::DraggingEdgeInput : Mode::DraggingEdgeOutput;
@@ -1038,7 +1042,12 @@ void NodeArea::EndSlot(NodeState &node, int inputType, int outputType) {
                 mode != state.mode &&           // makes sure, we cannot connect input and input or output and output
                 state.edgeStartNode != node.id; // makes sure, we cannot connect inputs and outputs of the same node
 
-            if (ImGui::IsMouseDown(0) && !ImGui::IsMouseDragging(0, 1.f) && state.mode == Mode::None && ImGui::IsWindowFocused()) {
+            if (ImGui::IsMouseDown(0)
+                && !ImGui::IsMouseDragging(0, 1.f)
+                && state.mode == Mode::None
+                && ImGui::IsWindowFocused()
+                && !anotherItemIsActive)
+            {
                 state.mode = mode;
                 state.dragStart = state.dragEnd = dragPos;
                 state.edgeStartNode = node.id;
