@@ -651,6 +651,11 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
                 actionCallback(UserAction::Delete);
             }
         }
+    } else /*if (!state.outerWindowFocused) */ {
+        if (state.mode == Mode::Selecting) {
+            // cancel selection - another component is active.
+            state.mode = Mode::None;
+        }
     }
 
     ImVec2 unclampedPos = ImGui::GetCurrentWindowRead()->Pos;
