@@ -14,7 +14,7 @@
 namespace {
 
 // for_each_alternative: Helper to iterate over types in variant.
-// Usage: 
+// Usage:
 // using VariantType = std::variant<int, bool>;
 // for_each_alternative<VariantType>([](auto S) {
 //     using type = decltype(S)::type;
@@ -147,7 +147,7 @@ struct Graph
                     forcePopup = true;
                 } else {
                     auto replacedEdge = std::find_if(edges.begin(), edges.end(), [&newEdge](Edge const &edge) {
-                        return edge.sinkNode == newEdge.sinkNode && 
+                        return edge.sinkNode == newEdge.sinkNode &&
                             edge.sinkSlot == newEdge.sinkSlot;
                     });
                     if (replacedEdge != edges.end()) {
@@ -167,7 +167,7 @@ struct Graph
 
         for (int i = 0; i < (int)nodes.size(); ++i) {
             ImGui::PushID(i);
-            std::visit([this](auto &node)->void { 
+            std::visit([this](auto &node)->void {
                 if constexpr(!std::is_same_v<decltype(node), std::monostate&>) {
                     node.draw(nodeArea);
                 }
@@ -194,7 +194,7 @@ struct Graph
     }
 
     static nodes::NodeState& getNodeState(NodeType &node) {
-        return std::visit([](auto &n)->nodes::NodeState& { 
+        return std::visit([](auto &n)->nodes::NodeState& {
             if constexpr(std::is_same_v<decltype(n), std::monostate&>) {
                 throw std::runtime_error("Attempted to query the state of a deleted node.");
             } else {
@@ -371,7 +371,7 @@ struct Recursion : public BaseNode<Recursion> {
             ImGui::Spacing();
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-            ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, ImU32(ImColor(60, 60, 70, 200)));
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImU32(ImColor(60, 60, 70, 200)));
             ImGui::PushID(this);
             ImVec2 size = area.GetContentSize(state) - ImGui::GetCursorPos();
             size = ImVec2(std::max(size.x, 100.f), std::max(size.y, 100.f));
@@ -402,7 +402,7 @@ void AddSomeNodes()
 
 void imgui_nodes_example_window(bool updateStyle)
 {
-    ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_FirstUseEver);
     ImGui::Begin("Node Editor Example");
 
     ImGui::Text("Just some space to test interaction");
@@ -411,7 +411,7 @@ void imgui_nodes_example_window(bool updateStyle)
 
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-    ImGui::PushStyleColor(ImGuiCol_ChildWindowBg, ImU32(ImColor(60, 60, 70, 200)));
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImU32(ImColor(60, 60, 70, 200)));
     ImGui::BeginChild("nodes", ImVec2(0, 0), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove);
     ImGui::PopStyleVar(2);
 

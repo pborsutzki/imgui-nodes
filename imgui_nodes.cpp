@@ -28,6 +28,12 @@ namespace nodes {
 
 namespace {
 
+// initializing na ImRect with these bounds allows setting min/max by calling ImRect::add with min
+// and max. This used to be the default behavior of the ImRect default constructor until ImGui 1.75.
+const ImRect defaultBoundsRect = ImRect(
+    ImVec2(std::numeric_limits<float>::max(), std::numeric_limits<float>::max()),
+    ImVec2(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest()));
+
 // from imgui.cpp
 static bool IsKeyPressedMap(ImGuiKey key, bool repeat = true)
 {
@@ -64,7 +70,7 @@ float distanceToBezierSquared(const ImVec2& point, const ImVec2& p1, const ImVec
 
 bool closeToBezier(const ImVec2& point, const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, float maxDist)
 {
-    ImRect aabb;
+    ImRect aabb = defaultBoundsRect;
     aabb.Add(p1); aabb.Add(p2); aabb.Add(p3); aabb.Add(p4);
     aabb.Expand(maxDist);
     if (aabb.Contains(point)) {
@@ -185,7 +191,7 @@ bool IntersectBezierAndLine(ImVec2 const &a, ImVec2 const &b, ImVec2 const &p0, 
 }
 
 bool isInSelectedRect(NodeArea &area, ImRect rect) {
-    ImRect selectionRect;
+    ImRect selectionRect = defaultBoundsRect;
     selectionRect.Add(area.state.dragStart);
     selectionRect.Add(area.state.dragEnd);
     if (ImGui::GetIO().KeyAlt) {
@@ -209,7 +215,7 @@ bool handleNodeDragSelection(NodeArea &area, int nodeId, ImRect rect) {
 
 bool handleEdgeDragSelection(NodeArea &area, int edgeId, const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4) {
     if (area.state.mode != NodeArea::Mode::None) {
-        ImRect selectionRect;
+        ImRect selectionRect = defaultBoundsRect;
         selectionRect.Add(area.state.dragStart);
         selectionRect.Add(area.state.dragEnd);
 
@@ -241,6 +247,9 @@ bool handleEdgeDragSelection(NodeArea &area, int edgeId, const ImVec2& p1, const
 
 ImGuiContext* setupInnerContext(ImGuiContext* outerContext) {
     ImGuiContext *innerContext = ImGui::CreateContext(outerContext->IO.Fonts);
+
+    innerContext->IO.BackendFlags = outerContext->IO.BackendFlags;
+    innerContext->IO.BackendPlatformName = outerContext->IO.BackendPlatformName;
 
     memcpy(innerContext->IO.KeyMap, outerContext->IO.KeyMap, ImGuiKey_COUNT * sizeof(int));
 
@@ -274,6 +283,8 @@ void innerContextNewFrame(ImGuiContext const* outerContext, ImGuiContext* innerC
         }
     }
 
+    innerIo.MouseDrawCursor = outerIo.MouseDrawCursor;
+
     if (active) {
         innerIo.MouseWheel = outerIo.MouseWheel;
         innerIo.MouseWheelH = outerIo.MouseWheelH;
@@ -306,15 +317,18 @@ void copyTransformDrawList(ImDrawList *targetDrawList, ImDrawList *sourceDrawLis
         targetDrawList->PrimWriteVtx(vertex.pos * scale + translate, vertex.uv, vertex.col);
     }
 
-    int sourceIdx = 0;
     for (int dc = 0; dc < sourceDrawList->CmdBuffer.size(); ++dc) {
         targetDrawList->CmdBuffer.resize(targetDrawList->CmdBuffer.size() + 1);
         ImDrawCmd const &sourceDrawCmd = sourceDrawList->CmdBuffer[dc];
-        targetDrawList->CmdBuffer.back() = sourceDrawCmd;
-        targetDrawList->CmdBuffer.back().ElemCount = 0;
+		targetDrawList->CmdBuffer.back() = sourceDrawCmd;
+
+        ImDrawCmd& cmdBuffer = targetDrawList->CmdBuffer.back();
+        cmdBuffer.ElemCount = 0;
+        cmdBuffer.IdxOffset = targetDrawList->IdxBuffer.Size;
 
         targetDrawList->PrimReserve(sourceDrawCmd.ElemCount, 0);
 
+		int sourceIdx = sourceDrawCmd.IdxOffset;
         for (unsigned int idx = 0; idx < sourceDrawCmd.ElemCount; ++idx, ++sourceIdx) {
             targetDrawList->PrimWriteIdx((ImDrawIdx)(sourceDrawList->IdxBuffer[sourceIdx] + indexBase));
         }
@@ -326,7 +340,7 @@ void copyTransformDrawList(ImDrawList *targetDrawList, ImDrawList *sourceDrawLis
         clipRect.ClipWith(targetClip);
 
         if (clipRect.Max.x <= clipRect.Min.x || clipRect.Max.y <= clipRect.Min.y) {
-            targetDrawList->CmdBuffer.back().UserCallback = (ImDrawCallback)([](const ImDrawList*, const ImDrawCmd*) {
+            cmdBuffer.UserCallback = (ImDrawCallback)([](const ImDrawList*, const ImDrawCmd*) {
                 // This would be fully clipped, so skip it to avoid errors.
                 // Adding an empty user callback for rendering is the easiest way to do so ...
                 // ... Still it would be better to skip the relevant data in the vertex/index buffers
@@ -334,7 +348,7 @@ void copyTransformDrawList(ImDrawList *targetDrawList, ImDrawList *sourceDrawLis
             });
         }
 
-        targetDrawList->CmdBuffer.back().ClipRect = ImVec4(clipRect.Min.x, clipRect.Min.y, clipRect.Max.x, clipRect.Max.y);
+        cmdBuffer.ClipRect = ImVec4(clipRect.Min.x, clipRect.Min.y, clipRect.Max.x, clipRect.Max.y);
     }
 }
 
@@ -342,12 +356,16 @@ void copyTransformDrawList(ImDrawList *targetDrawList, ImDrawList *sourceDrawLis
 // * Translate and scale the vertices and clip rects accordingly
 // * Rebases the indices to fit into the outer index buffer
 // * Reclips the clip rects to our outer clip rect
-void copyTransformDrawCmds(ImDrawData* sourceDrawData, ImVec2 scale, ImVec2 translate) {
+void copyTransformDrawCmds(ImDrawData* sourceDrawData, float scale, ImVec2 translate) {
     ImDrawList *targetDrawList = ImGui::GetWindowDrawList();
 
     for (int i = 0; i < sourceDrawData->CmdListsCount; ++i) {
         ImDrawList *sourceDrawList = sourceDrawData->CmdLists[i];
-        copyTransformDrawList(targetDrawList, sourceDrawList, scale, translate);
+        copyTransformDrawList(targetDrawList, sourceDrawList, ImVec2(scale, scale), translate);
+
+#ifdef IMGUI_ANTIALIASFRINGESCALE
+        targetDrawList->_FringeScale = sourceDrawList->_FringeScale / scale;
+#endif //IMGUI_ANTIALIASFRINGESCALE
     }
     // make sure no one messes with our copied draw calls
     targetDrawList->AddDrawCmd();
@@ -527,9 +545,6 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
 #ifdef IMGUI_NODES_DEBUG
     debug << "BeginNodeArea " << ImGui::IsAnyItemActive() << std::endl;
 #endif
-#ifdef IMGUI_ANTIALIASFRINGESCALE
-    ImGui::PushStyleVar(ImGuiStyleVar_AntiAliasFringeScale, state.innerContext->Style.AntiAliasFringeScale / state.zoom);
-#endif
     ImGui::SetNextWindowPos(state.innerWndPos, setWindowPos ? ImGuiCond_Always : ImGuiCond_Once);
     ImGui::SetNextWindowSize(state.nodeAreaSize);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4());
@@ -656,6 +671,7 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
             // cancel selection - another component is active.
             state.mode = Mode::None;
         }
+        ImGui::ClearActiveID();
     }
 
     ImVec2 unclampedPos = ImGui::GetCurrentWindowRead()->Pos;
@@ -724,8 +740,10 @@ void NodeArea::EndNodeArea() {
     {
         ImDrawList *draw_list = ImGui::GetWindowDrawList();
         ImVec2 offset = ImGui::GetWindowPos();
-        draw_list->AddRectFilled(offset + state.dragStart, offset + state.dragEnd, style[Style_SelectionFill]);
-        draw_list->AddRect(offset + state.dragStart, offset + state.dragEnd, style[Style_SelectionBorder]);
+        if (state.dragStart != state.dragEnd) {
+            draw_list->AddRectFilled(offset + state.dragStart, offset + state.dragEnd, style[Style_SelectionFill]);
+            draw_list->AddRect(offset + state.dragStart, offset + state.dragEnd, style[Style_SelectionBorder]);
+        }
     }
 
     if (state.mode == Mode::DraggingEdgeInput ||
@@ -747,9 +765,6 @@ void NodeArea::EndNodeArea() {
     ImGui::PopClipRect();
     ImGui::End();
     ImGui::PopStyleColor();
-#ifdef IMGUI_ANTIALIASFRINGESCALE
-    ImGui::PopStyleVar();
-#endif
     ImGui::Render();
     ImDrawData* innerDrawData = ImGui::GetDrawData();
     IM_ASSERT(innerDrawData->Valid);
@@ -764,7 +779,7 @@ void NodeArea::EndNodeArea() {
         floor(fmodf(state.innerWndPos.y, 1.f) * state.zoom));
 
     ImVec2 translate = state.outerContext->CurrentWindow->Pos + fractInnerWndPos;
-    ImVec2 scale = ImVec2(state.zoom, state.zoom);
+    float scale = state.zoom;
 
     copyTransformDrawCmds(innerDrawData, scale, translate);
 

@@ -1,6 +1,6 @@
 [submodule "cubicSpline"]
 	path = cubicSpline
-	url = https://github.com/nrtaylor/CubicSplineClosestPoint.git
+	url = https://github.com/pborsutzki/CubicSplineClosestPoint.git
 [submodule "imgui"]
 	path = imgui
 	url = https://github.com/ocornut/imgui.git

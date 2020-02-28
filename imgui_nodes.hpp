@@ -1,5 +1,7 @@
 #pragma once
 
+//#define IMGUI_NODES_DEBUG
+
 #include <imgui.h>
 #include <vector>
 #include <array>
@@ -15,7 +17,7 @@ typedef int NodeAreaFlags; // These flags should typically only be set for one f
 enum NodeAreaFlags_ {
     NodeAreaFlags_UpdateStyle = 1 << 0, // Applies the current ImGui style to the node graph area.
     NodeAreaFlags_SnapToGrid  = 1 << 1, // Aligns all nodes to the configured snapGrid.
-    NodeAreaFlags_ForceRedraw = 1 << 2, // Redraws all visible and invisible nodes. Use 
+    NodeAreaFlags_ForceRedraw = 1 << 2, // Redraws all visible and invisible nodes. Use
                                         // after changing node positions/sizes programmatically.
     NodeAreaFlags_ZoomToFit   = 1 << 3  // Changes zoom level to fit the whole graph on the visible screen.
 };
@@ -130,7 +132,7 @@ struct Style {
     void push(StyleColor idx, ImColor const &col);
     void pop(int count = 1);
 
-    Style() 
+    Style()
         : styleFloats({
             3.f,  // Style_EdgeSize
             4.f,  // Style_EdgeSelectedSize
@@ -172,9 +174,9 @@ struct Style {
 };
 
 struct NodeArea {
-    enum class Mode { 
-        None, 
-        Selecting, SelectionCaptureAdd, SelectionCaptureRemove, 
+    enum class Mode {
+        None,
+        Selecting, SelectionCaptureAdd, SelectionCaptureRemove,
         DraggingNodes, ResizingNode,
         DraggingEdgeInput, DraggingEdgeOutput,
         Escaped, SelectAll
