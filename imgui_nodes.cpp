@@ -267,6 +267,8 @@ void innerContextNewFrame(ImGuiContext const* outerContext, ImGuiContext* innerC
     innerIo.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
 
     innerIo.DeltaTime = outerIo.DeltaTime;
+    innerIo.FontGlobalScale = outerIo.FontGlobalScale;
+
 
     if (active || hovered) {
         innerIo.MousePos = (outerIo.MousePos - outerWindowPos) / scale;
