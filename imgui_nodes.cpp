@@ -776,7 +776,9 @@ void NodeArea::EndNodeArea() {
     ImVec2 translate = state.outerContext->CurrentWindow->Pos + fractInnerWndPos;
     float scale = state.zoom;
 
-    copyTransformDrawCmds(innerDrawData, scale, translate);
+    if ((state.flags & NodeAreaFlags_NoCopy) == 0) {
+        copyTransformDrawCmds(innerDrawData, scale, translate);
+    }
 
 #ifdef IMGUI_NODES_DEBUG
     debug << "active node " << state.activeNode << std::endl;

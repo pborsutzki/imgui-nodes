@@ -19,7 +19,9 @@ enum NodeAreaFlags_ {
     NodeAreaFlags_SnapToGrid  = 1 << 1, // Aligns all nodes to the configured snapGrid.
     NodeAreaFlags_ForceRedraw = 1 << 2, // Redraws all visible and invisible nodes. Use
                                         // after changing node positions/sizes programmatically.
-    NodeAreaFlags_ZoomToFit   = 1 << 3  // Changes zoom level to fit the whole graph on the visible screen.
+    NodeAreaFlags_ZoomToFit   = 1 << 3, // Changes zoom level to fit the whole graph on the visible screen.
+    NodeAreaFlags_NoCopy      = 1 << 4  // Do not copy draw commands (does not display). Useful for
+                                        // re-rendering the node ui until automatic resizes converge.
 };
 
 struct SlotState {
