@@ -6,8 +6,6 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 #endif // IMGUI_DEFINE_MATH_OPERATORS
 
-//#define IMGUI_ANTIALIASFRINGESCALE
-
 #include <imgui_internal.h>
 
 #include <CubicSpline.h>
@@ -253,9 +251,6 @@ ImGuiContext* setupInnerContext(ImGuiContext* outerContext) {
 
     memcpy(innerContext->IO.KeyMap, outerContext->IO.KeyMap, ImGuiKey_COUNT * sizeof(int));
 
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    innerContext->IO.RenderDrawListsFn = nullptr;
-#endif
     innerContext->IO.SetClipboardTextFn = outerContext->IO.SetClipboardTextFn;
     innerContext->IO.GetClipboardTextFn = outerContext->IO.GetClipboardTextFn;
     innerContext->IO.ClipboardUserData = outerContext->IO.ClipboardUserData;
@@ -320,7 +315,7 @@ void copyTransformDrawList(ImDrawList *targetDrawList, ImDrawList *sourceDrawLis
     for (int dc = 0; dc < sourceDrawList->CmdBuffer.size(); ++dc) {
         targetDrawList->CmdBuffer.resize(targetDrawList->CmdBuffer.size() + 1);
         ImDrawCmd const &sourceDrawCmd = sourceDrawList->CmdBuffer[dc];
-		targetDrawList->CmdBuffer.back() = sourceDrawCmd;
+        targetDrawList->CmdBuffer.back() = sourceDrawCmd;
 
         ImDrawCmd& cmdBuffer = targetDrawList->CmdBuffer.back();
         cmdBuffer.ElemCount = 0;
@@ -328,7 +323,7 @@ void copyTransformDrawList(ImDrawList *targetDrawList, ImDrawList *sourceDrawLis
 
         targetDrawList->PrimReserve(sourceDrawCmd.ElemCount, 0);
 
-		int sourceIdx = sourceDrawCmd.IdxOffset;
+        int sourceIdx = sourceDrawCmd.IdxOffset;
         for (unsigned int idx = 0; idx < sourceDrawCmd.ElemCount; ++idx, ++sourceIdx) {
             targetDrawList->PrimWriteIdx((ImDrawIdx)(sourceDrawList->IdxBuffer[sourceIdx] + indexBase));
         }
@@ -363,9 +358,7 @@ void copyTransformDrawCmds(ImDrawData* sourceDrawData, float scale, ImVec2 trans
         ImDrawList *sourceDrawList = sourceDrawData->CmdLists[i];
         copyTransformDrawList(targetDrawList, sourceDrawList, ImVec2(scale, scale), translate);
 
-#ifdef IMGUI_ANTIALIASFRINGESCALE
         targetDrawList->_FringeScale = sourceDrawList->_FringeScale / scale;
-#endif //IMGUI_ANTIALIASFRINGESCALE
     }
     // make sure no one messes with our copied draw calls
     targetDrawList->AddDrawCmd();
@@ -757,7 +750,7 @@ void NodeArea::EndNodeArea() {
         ImVec2 p2 = offset + (state.mode == Mode::DraggingEdgeInput ? state.dragEnd : state.dragStart);
         ImVec2 cp2 = p2 + ImVec2(-50, 0);
 
-        draw_list->AddBezierCurve(p1, cp1, cp2, p2, style[Style_EdgeDragging], style[Style_EdgeDraggingSize]);
+        draw_list->AddBezierCubic(p1, cp1, cp2, p2, style[Style_EdgeDragging], style[Style_EdgeDraggingSize]);
     }
 
     state.innerWndPos = ImGui::GetCurrentWindowRead()->Pos;
@@ -897,7 +890,7 @@ bool NodeArea::BeginNode(NodeState &node, bool resizeable) {
     draw_list->PushClipRect(state.innerWndPos + node.pos, state.innerWndPos + node.pos + ImGui::GetWindowSize());
 
     draw_list->AddRectFilled(offset, offset + node.size, nodeBg, style[Style_NodeRounding]);
-    draw_list->AddRect(offset, offset + node.size, nodeBorder, style[Style_NodeRounding], -1, style[Style_NodeBorderSize]);
+    draw_list->AddRect(offset, offset + node.size, nodeBorder, style[Style_NodeRounding], ImDrawFlags_RoundCornersAll, style[Style_NodeBorderSize]);
 
     draw_list->PopClipRect();
 
@@ -1121,7 +1114,7 @@ bool NodeArea::DrawEdge(int edgeId, NodeState const &sourceNode, int sourceSlot,
     bool hovered = state.outerWindowFocused && ImGui::IsWindowHovered() &&
         closeToBezier(ImGui::GetMousePos(), p1, cp1, cp2, p2, 8.f);
     if (state.selectedEdges.isSelected(edgeId) || wouldSelect) {
-        draw_list->AddBezierCurve(p1, cp1, cp2, p2, style[Style_EdgeSelectedColor], style[Style_EdgeSelectedSize]);
+        draw_list->AddBezierCubic(p1, cp1, cp2, p2, style[Style_EdgeSelectedColor], style[Style_EdgeSelectedSize]);
     }
 
     ImColor color = style[Style_EdgeColor];
@@ -1136,7 +1129,7 @@ bool NodeArea::DrawEdge(int edgeId, NodeState const &sourceNode, int sourceSlot,
         }
     }
 
-    draw_list->AddBezierCurve(p1, cp1, cp2, p2, color, style[Style_EdgeSize]);
+    draw_list->AddBezierCubic(p1, cp1, cp2, p2, color, style[Style_EdgeSize]);
 
     return true;
 }
