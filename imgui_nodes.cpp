@@ -568,6 +568,10 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
         ImGuiWindowFlags_NoBringToFrontOnFocus;
     ImGui::Begin("node_graph", nullptr, wndFlags);
 
+    if (!setWindowPos) {
+        state.innerWndPos = ImGui::GetCurrentWindowRead()->Pos;
+    }
+
     // Avoids early clipping when zoomed in
     ImGui::PushClipRect(ImVec2(-1.f, -1.f), ImVec2(windowSize) + ImVec2(1.f, 1.f), false);
 
@@ -577,7 +581,8 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
     }
     if (state.outerWindowFocused && state.scrolling && ImGui::IsMouseDragging(2, 0.0f)) {
         ImGui::ClearActiveID();
-        ImGui::SetWindowPos(ImGui::GetCurrentWindowRead()->Pos + ImGui::GetIO().MouseDelta);
+        state.innerWndPos = ImGui::GetCurrentWindowRead()->Pos + ImGui::GetIO().MouseDelta;
+        ImGui::SetWindowPos(state.innerWndPos);
     } else {
         state.scrolling = false;
     }
@@ -769,7 +774,6 @@ void NodeArea::EndNodeArea() {
         draw_list->AddBezierCubic(p1, cp1, cp2, p2, style[Style_EdgeDragging], style[Style_EdgeDraggingSize]);
     }
 
-    state.innerWndPos = ImGui::GetCurrentWindowRead()->Pos;
     state.anyItemActive = ImGui::IsAnyItemActive();
     ImGui::PopClipRect();
     ImGui::End();
