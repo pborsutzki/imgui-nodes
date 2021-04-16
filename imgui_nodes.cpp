@@ -302,12 +302,24 @@ void innerContextNewFrame(ImGuiContext const* outerContext, ImGuiContext* innerC
     innerContext->IO.KeySuper = outerContext->IO.KeySuper;
 }
 
-void copyTransformDrawList(ImDrawList *targetDrawList, ImDrawList *sourceDrawList, ImVec2 scale = ImVec2(1.f, 1.f), ImVec2 translate = {}) {
+void copyTransformDrawList(ImDrawList *targetDrawList, ImDrawList const*sourceDrawList, ImVec2 scale = ImVec2(1.f, 1.f), ImVec2 translate = {}) {
     targetDrawList->Flags = sourceDrawList->Flags;
     ImRect targetClip(targetDrawList->_ClipRectStack.back());
+
     int indexBase = targetDrawList->_VtxCurrentIdx;
 
+    // Currently not supporting very large graphs with more than 64k indices. If this check
+    // fails for your use case, you can try to configure ImDrawIdx to be uint in imconfig.h
+    IM_ASSERT(sourceDrawList->VtxBuffer.size() < std::numeric_limits<ImDrawIdx>::max());
+
     targetDrawList->PrimReserve(0, sourceDrawList->VtxBuffer.size());
+
+    // PrimReserve(0, numVertices) will usually increment _VtxCurrentIdx by numVertices. In case
+    // _VtxCurrentIdx exceeds 64k indices, it may also insert a new DrawCmd with a VtxOffset and
+    // reset _VtxCurrentIdx on the way.
+    if (targetDrawList->_VtxCurrentIdx == 0) {
+        indexBase = 0;
+    }
 
     for (int vtx = 0; vtx < sourceDrawList->VtxBuffer.size(); ++vtx) {
         auto const& vertex = sourceDrawList->VtxBuffer[vtx];
@@ -315,11 +327,13 @@ void copyTransformDrawList(ImDrawList *targetDrawList, ImDrawList *sourceDrawLis
     }
 
     for (int dc = 0; dc < sourceDrawList->CmdBuffer.size(); ++dc) {
-        targetDrawList->CmdBuffer.resize(targetDrawList->CmdBuffer.size() + 1);
-        ImDrawCmd const &sourceDrawCmd = sourceDrawList->CmdBuffer[dc];
-        targetDrawList->CmdBuffer.back() = sourceDrawCmd;
+        ImDrawCmd const& sourceDrawCmd = sourceDrawList->CmdBuffer[dc];
+
+        IM_ASSERT(sourceDrawCmd.VtxOffset == 0);
+        targetDrawList->AddDrawCmd();
 
         ImDrawCmd& cmdBuffer = targetDrawList->CmdBuffer.back();
+        cmdBuffer.TextureId = sourceDrawCmd.TextureId;
         cmdBuffer.ElemCount = 0;
         cmdBuffer.IdxOffset = targetDrawList->IdxBuffer.Size;
 
@@ -357,7 +371,7 @@ void copyTransformDrawCmds(ImDrawData* sourceDrawData, float scale, ImVec2 trans
     ImDrawList *targetDrawList = ImGui::GetWindowDrawList();
 
     for (int i = 0; i < sourceDrawData->CmdListsCount; ++i) {
-        ImDrawList *sourceDrawList = sourceDrawData->CmdLists[i];
+        ImDrawList const *sourceDrawList = sourceDrawData->CmdLists[i];
         copyTransformDrawList(targetDrawList, sourceDrawList, ImVec2(scale, scale), translate);
 
         targetDrawList->_FringeScale = sourceDrawList->_FringeScale / scale;
