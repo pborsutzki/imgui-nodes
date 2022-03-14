@@ -6,6 +6,7 @@
 #include <vector>
 #include <array>
 #include <functional>
+#include <cstdint>
 
 namespace nodes {
 
