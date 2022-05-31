@@ -32,13 +32,6 @@ const ImRect defaultBoundsRect = ImRect(
     ImVec2(std::numeric_limits<float>::max(), std::numeric_limits<float>::max()),
     ImVec2(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest()));
 
-// from imgui.cpp
-static bool IsKeyPressedMap(ImGuiKey key, bool repeat = true)
-{
-    const int key_index = GImGui->IO.KeyMap[key];
-    return (key_index >= 0) ? ImGui::IsKeyPressed(key_index, repeat) : false;
-}
-
 inline ImVec2 operator+(const ImVec2& lhs, const float rhs) { return ImVec2(lhs.x + rhs, lhs.y + rhs); }
 inline ImVec2 operator-(const ImVec2& lhs, const float rhs) { return ImVec2(lhs.x - rhs, lhs.y - rhs); }
 
@@ -248,14 +241,32 @@ ImGuiContext* setupInnerContext(ImGuiContext* outerContext) {
 
     innerContext->IO.BackendFlags = outerContext->IO.BackendFlags;
     innerContext->IO.BackendPlatformName = outerContext->IO.BackendPlatformName;
+    innerContext->IO.BackendRendererName = outerContext->IO.BackendRendererName;
+    innerContext->IO.BackendPlatformUserData = outerContext->IO.BackendPlatformUserData;
+    innerContext->IO.BackendRendererUserData = outerContext->IO.BackendRendererUserData;
+    innerContext->IO.BackendLanguageUserData = outerContext->IO.BackendLanguageUserData;
 
-    memcpy(innerContext->IO.KeyMap, outerContext->IO.KeyMap, ImGuiKey_COUNT * sizeof(int));
+    innerContext->IO.MouseDoubleClickTime = outerContext->IO.MouseDoubleClickTime;
+    innerContext->IO.MouseDoubleClickMaxDist = outerContext->IO.MouseDoubleClickMaxDist;
+    innerContext->IO.MouseDragThreshold = outerContext->IO.MouseDragThreshold;
+    innerContext->IO.KeyRepeatDelay = outerContext->IO.KeyRepeatDelay;
+    innerContext->IO.KeyRepeatRate = outerContext->IO.KeyRepeatRate;
+    innerContext->IO.UserData = outerContext->IO.UserData;
+
+    innerContext->IO.MouseDrawCursor = outerContext->IO.MouseDrawCursor;
+    innerContext->IO.ConfigMacOSXBehaviors = outerContext->IO.ConfigMacOSXBehaviors;
+    innerContext->IO.ConfigInputTrickleEventQueue = outerContext->IO.ConfigInputTrickleEventQueue;
+    innerContext->IO.ConfigInputTextCursorBlink = outerContext->IO.ConfigInputTextCursorBlink;
+    innerContext->IO.ConfigDragClickToInputText = outerContext->IO.ConfigDragClickToInputText;
+    innerContext->IO.ConfigWindowsResizeFromEdges = outerContext->IO.ConfigWindowsResizeFromEdges;
+    innerContext->IO.ConfigWindowsMoveFromTitleBarOnly = outerContext->IO.ConfigWindowsMoveFromTitleBarOnly;
+    innerContext->IO.ConfigMemoryCompactTimer = outerContext->IO.ConfigMemoryCompactTimer;
 
     innerContext->IO.SetClipboardTextFn = outerContext->IO.SetClipboardTextFn;
     innerContext->IO.GetClipboardTextFn = outerContext->IO.GetClipboardTextFn;
     innerContext->IO.ClipboardUserData = outerContext->IO.ClipboardUserData;
-    innerContext->IO.ImeSetInputScreenPosFn = outerContext->IO.ImeSetInputScreenPosFn;
-    innerContext->IO.ImeWindowHandle = outerContext->IO.ImeWindowHandle;
+    innerContext->IO.SetPlatformImeDataFn = outerContext->IO.SetPlatformImeDataFn;
+
     innerContext->Style = outerContext->Style;
     return innerContext;
 }
@@ -269,37 +280,27 @@ void innerContextNewFrame(ImGuiContext const* outerContext, ImGuiContext* innerC
     innerIo.DeltaTime = outerIo.DeltaTime;
     innerIo.FontGlobalScale = outerIo.FontGlobalScale;
 
-
     if (active || hovered) {
-        innerIo.MousePos = (outerIo.MousePos - outerWindowPos) / scale;
-    }
-
-    for (int i = 0; i < 3; i++) {
-        if (active || !active && innerIo.MouseDown[i]) {
-            innerIo.MouseDown[i] = outerIo.MouseDown[i];
+        innerContext->InputEventsQueue.clear();
+        for (int i = 0; i < outerContext->InputEventsTrail.size(); ++i) {
+            if (outerContext->InputEventsTrail[i].Type == ImGuiInputEventType_MousePos) {
+                auto evt = outerContext->InputEventsTrail[i];
+                if (evt.MousePos.PosX != -FLT_MAX) {
+                    evt.MousePos.PosX = (evt.MousePos.PosX - outerWindowPos.x) / scale;
+                    evt.MousePos.PosY = (evt.MousePos.PosY - outerWindowPos.y) / scale;
+                }
+                innerContext->InputEventsQueue.push_back(evt);
+            } else {
+                innerContext->InputEventsQueue.push_back(outerContext->InputEventsTrail[i]);
+            }
+        }
+    } else {
+        if (innerContext->InputEventsQueue.empty()) {
+            // When we are not processing delayed events any more and are not active any more, we
+            // don't want any keys to stay down.
+            innerIo.ClearInputKeys();
         }
     }
-
-    innerIo.MouseDrawCursor = outerIo.MouseDrawCursor;
-
-    if (active) {
-        innerIo.MouseWheel = outerIo.MouseWheel;
-        innerIo.MouseWheelH = outerIo.MouseWheelH;
-        memcpy(innerIo.KeysDown, outerIo.KeysDown, sizeof(innerIo.KeysDown));
-        memcpy(innerIo.NavInputs, outerIo.NavInputs, sizeof(innerIo.NavInputs));
-        innerIo.InputQueueCharacters = outerIo.InputQueueCharacters;
-    } else {
-        innerIo.MouseWheel = 0.f;
-        innerIo.MouseWheelH = 0.f;
-        memset(innerIo.KeysDown, 0, sizeof(innerIo.KeysDown));
-        memset(innerIo.NavInputs, 0, sizeof(innerIo.NavInputs));
-        innerIo.InputQueueCharacters.clear();
-    }
-
-    innerContext->IO.KeyCtrl = outerContext->IO.KeyCtrl;
-    innerContext->IO.KeyShift = outerContext->IO.KeyShift;
-    innerContext->IO.KeyAlt = outerContext->IO.KeyAlt;
-    innerContext->IO.KeySuper = outerContext->IO.KeySuper;
 }
 
 void copyTransformDrawList(ImDrawList *targetDrawList, ImDrawList const*sourceDrawList, ImVec2 scale = ImVec2(1.f, 1.f), ImVec2 translate = {}) {
@@ -383,10 +384,8 @@ void copyTransformDrawCmds(ImDrawData* sourceDrawData, float scale, ImVec2 trans
 bool WasItemActive()
 {
     ImGuiContext& g = *GImGui;
-    if (g.ActiveIdPreviousFrame)
-    {
-        ImGuiWindow* window = g.CurrentWindow;
-        return g.ActiveIdPreviousFrame == window->DC.LastItemId;
+    if (g.ActiveIdPreviousFrame) {
+        return g.ActiveIdPreviousFrame == g.LastItemData.ID;
     }
     return false;
 }
@@ -529,7 +528,7 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
     state.outerWindowFocused = ImGui::IsWindowFocused();
     state.outerWindowHovered = ImGui::IsWindowHovered();
 
-    if (state.outerWindowFocused && state.hoveredNode == -1 && !state.anyItemActive && ImGui::IsKeyReleased(outerIo.KeyMap[ImGuiKey_Home])) {
+    if (state.outerWindowFocused && state.hoveredNode == -1 && !state.anyItemActive && ImGui::IsKeyReleased(ImGuiKey_Home)) {
         state.flags |= NodeAreaFlags_ZoomToFit;
     }
 
@@ -596,7 +595,7 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
             state.mode = Mode::None;
             break;
         case Mode::Selecting: {
-            if (ImGui::IsKeyPressed(ImGui::GetIO().KeyMap[ImGuiKey_Escape])) {
+            if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
                 state.mode = Mode::Escaped;
                 break;
             }
@@ -659,24 +658,24 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
 
             ImGuiIO const& io = ImGui::GetIO();
             // from imgui.cpp
-            const bool is_shortcut_key_only = (io.KeyCtrl && !io.KeySuper) && !io.KeyAlt && !io.KeyShift;
+            const bool is_ctrl_key_only = (io.KeyMods == ImGuiKeyModFlags_Ctrl);
 
-            if (is_shortcut_key_only) {
-                if (IsKeyPressedMap(ImGuiKey_X)) {
+            if (is_ctrl_key_only) {
+                if (ImGui::IsKeyPressed(ImGuiKey_X)) {
                     actionCallback(UserAction::Cut);
-                } else if (IsKeyPressedMap(ImGuiKey_C)) {
+                } else if (ImGui::IsKeyPressed(ImGuiKey_C)) {
                     actionCallback(UserAction::Copy);
-                } else if (IsKeyPressedMap(ImGuiKey_V)) {
+                } else if (ImGui::IsKeyPressed(ImGuiKey_V)) {
                     actionCallback(UserAction::Paste);
-                } else if (IsKeyPressedMap(ImGuiKey_Z)) {
+                } else if (ImGui::IsKeyPressed(ImGuiKey_Z)) {
                     actionCallback(UserAction::Undo);
-                } else if (IsKeyPressedMap(ImGuiKey_Y)) {
+                } else if (ImGui::IsKeyPressed(ImGuiKey_Y)) {
                     actionCallback(UserAction::Redo);
-                } else if (IsKeyPressedMap(ImGuiKey_A) && state.mode == Mode::None) {
+                } else if (ImGui::IsKeyPressed(ImGuiKey_A) && state.mode == Mode::None) {
                     state.mode = Mode::SelectAll;
                 }
             }
-            if (IsKeyPressedMap(ImGuiKey_Delete)) {
+            if (ImGui::IsKeyPressed(ImGuiKey_Delete)) {
                 actionCallback(UserAction::Delete);
             }
         }
@@ -783,6 +782,10 @@ void NodeArea::EndNodeArea() {
     IM_ASSERT(innerDrawData->Valid);
 
     ImGui::SetCurrentContext(state.outerContext);
+
+    if (state.outerWindowHovered) {
+        state.outerContext->MouseCursor = state.innerContext->MouseCursor;
+    }
 
     // ImGui snaps geometry to whole pixels. This leads to jaggy movement when zooming in.
     // We fix this by translating by the fract of the exact position.

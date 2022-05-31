@@ -7,9 +7,6 @@
     <Filter Include="cubicSpline">
       <UniqueIdentifier>{bdbaa819-b488-4f99-ab22-cf56b8957011}</UniqueIdentifier>
     </Filter>
-    <Filter Include="gl3w">
-      <UniqueIdentifier>{8c7a9783-dc4c-4b6a-a4de-2a9883925ee1}</UniqueIdentifier>
-    </Filter>
     <Filter Include="glfw3_gl3">
       <UniqueIdentifier>{e17b0eb9-8fd0-4389-b65b-5adb557e68c9}</UniqueIdentifier>
     </Filter>
@@ -39,9 +36,6 @@
     <ClCompile Include="..\imgui\imgui_draw.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
-    <ClCompile Include="..\imgui\examples\libs\gl3w\GL\gl3w.c">
-      <Filter>gl3w</Filter>
-    </ClCompile>
     <ClCompile Include="..\cubicSpline\CubicSpline.cpp">
       <Filter>cubicSpline</Filter>
     </ClCompile>
@@ -70,12 +64,6 @@
     </ClInclude>
     <ClInclude Include="..\imgui\imgui_internal.h">
       <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\imgui\examples\libs\gl3w\GL\gl3w.h">
-      <Filter>gl3w</Filter>
-    </ClInclude>
-    <ClInclude Include="..\imgui\examples\libs\gl3w\GL\glcorearb.h">
-      <Filter>gl3w</Filter>
     </ClInclude>
     <ClInclude Include="..\cubicSpline\CubicSpline.h">
       <Filter>cubicSpline</Filter>

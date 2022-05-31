@@ -38,7 +38,7 @@ Key Bindings
 Notes
 -----
 * The Nodes library itself requires C++11 to build, the sample currently requires C++17.
-* Currently there are only project files for Microsoft Visual Studio 2019.
+* Currently there are only project files for Microsoft Visual Studio 2022.
 * The project is using some ImGui internals which can change at any time. Things might not work out of the box if you use a different ImGui version than the one referenced here.
 * It is recommended to oversample the font loaded into imgui by the maximum amount of pixels (8) for best results of zoomed text. Example:
   ```
