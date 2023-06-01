@@ -2,6 +2,10 @@
 
 //#define IMGUI_NODES_DEBUG
 
+/*#ifndef IMGUI_DEFINE_MATH_OPERATORS
+# define IMGUI_DEFINE_MATH_OPERATORS
+#endif // IMGUI_DEFINE_MATH_OPERATORS*/
+
 #include <imgui.h>
 #include <vector>
 #include <array>
@@ -37,9 +41,11 @@ struct NodeState {
 
     int id;
 
-    ImVec2 pos;
+    ImVec2 pos;         // position of the nodes imgui window
     ImVec2 posFloat;
-    ImVec2 size;
+    ImVec2 size;        // size of the nodes imgui window
+    ImVec2 sizeConstraintMin;
+    ImVec2 sizeConstraintMax;
 
     ImVec2 lastCursor;
     bool skip;
@@ -199,6 +205,7 @@ struct NodeArea {
     struct InternalState {
         bool initialized = false;
         ImVec2 nodeAreaSize = ImVec2(20000.f, 20000.f);
+        ImVec2 zoomLimits = ImVec2(0.15f, 16.f);
 
         ImGuiContext* innerContext;
         ImGuiContext* outerContext;

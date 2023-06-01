@@ -1,16 +1,10 @@
 #include "imgui_nodes.hpp"
 
-#include <imgui.h>
-
-#ifndef IMGUI_DEFINE_MATH_OPERATORS
-#define IMGUI_DEFINE_MATH_OPERATORS
-#endif // IMGUI_DEFINE_MATH_OPERATORS
-
 #include <imgui_internal.h>
 
 #include <CubicSpline.h>
 
-#include <math.h>
+#include <cmath>
 #include <vector>
 #include <algorithm>
 #include <array>
@@ -34,6 +28,15 @@ const ImRect defaultBoundsRect = ImRect(
 
 inline ImVec2 operator+(const ImVec2& lhs, const float rhs) { return ImVec2(lhs.x + rhs, lhs.y + rhs); }
 inline ImVec2 operator-(const ImVec2& lhs, const float rhs) { return ImVec2(lhs.x - rhs, lhs.y - rhs); }
+inline ImVec2 operator*(const ImVec2& lhs, const float rhs) { return ImVec2(lhs.x * rhs, lhs.y * rhs); }
+inline ImVec2 operator/(const ImVec2& lhs, const float rhs) { return ImVec2(lhs.x / rhs, lhs.y / rhs); }
+
+inline ImVec2 operator+(const ImVec2& lhs, const ImVec2& rhs) { return ImVec2(lhs.x + rhs.x, lhs.y + rhs.y); }
+inline ImVec2 operator-(const ImVec2& lhs, const ImVec2& rhs) { return ImVec2(lhs.x - rhs.x, lhs.y - rhs.y); }
+inline ImVec2 operator*(const ImVec2& lhs, const ImVec2& rhs) { return ImVec2(lhs.x * rhs.x, lhs.y * rhs.y); }
+inline ImVec2 operator/(const ImVec2& lhs, const ImVec2& rhs) { return ImVec2(lhs.x / rhs.x, lhs.y / rhs.y); }
+
+inline ImVec2& operator+=(ImVec2& lhs, const ImVec2& rhs) { lhs.x += rhs.x; lhs.y += rhs.y; return lhs; }
 
 inline bool operator==(const ImVec2& lhs, const ImVec2& rhs) { return lhs.x == rhs.x && lhs.y == rhs.y; }
 inline bool operator!=(const ImVec2& lhs, const ImVec2& rhs) { return !(lhs == rhs); }
@@ -75,7 +78,7 @@ template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
 }
 
-/*based on http://mysite.verizon.net/res148h4j/javascript/script_exact_cubic.html#the%20source%20code */
+// based on http://mysite.verizon.net/res148h4j/javascript/script_exact_cubic.html#the%20source%20code
 std::array<float, 3> cubicRoots(ImVec4 const &P)
 {
     float A = P.y / P.x;
@@ -98,7 +101,7 @@ std::array<float, 3> cubicRoots(ImVec4 const &P)
         t[2] = -A / 3.f - (S + T) / 2.f;            // real part of complex root
         float Im = abs(sqrt(3.f)*(S - T) / 2.f);    // complex part of root pair
 
-                                                    /*discard complex roots*/
+                                                    // discard complex roots
         if (Im != 0.f)
         {
             t[1] = -1.f;
@@ -143,14 +146,14 @@ bool IntersectBezierAndLine(ImVec2 const &a, ImVec2 const &b, ImVec2 const &p0, 
     std::array<float, 4> by = bezierCoeffs(p0.y, p1.y, p2.y, p3.y);
 
     ImVec4 P;
-    P.x = A*bx[0] + B*by[0];      /*t^3*/
-    P.y = A*bx[1] + B*by[1];      /*t^2*/
-    P.z = A*bx[2] + B*by[2];      /*t*/
-    P.w = A*bx[3] + B*by[3] + C;  /*1*/
+    P.x = A*bx[0] + B*by[0];      // t^3
+    P.y = A*bx[1] + B*by[1];      // t^2
+    P.z = A*bx[2] + B*by[2];      // t
+    P.w = A*bx[3] + B*by[3] + C;  // 1
 
     std::array<float, 3> r = cubicRoots(P);
 
-    /*verify the roots are in bounds of the linear segment*/
+    // verify the roots are in bounds of the linear segment
     for (int i = 0; i < 3; ++i)
     {
         float t = r[i];
@@ -163,15 +166,15 @@ bool IntersectBezierAndLine(ImVec2 const &a, ImVec2 const &b, ImVec2 const &p0, 
         X.x = bx[0] * t*t*t + bx[1] * t*t + bx[2] * t + bx[3];
         X.y = by[0] * t*t*t + by[1] * t*t + by[2] * t + by[3];
 
-        /*above is intersection point assuming infinitely long line segment,
-        make sure we are also in bounds of the line*/
+        // above is intersection point assuming infinitely long line segment,
+        // make sure we are also in bounds of the line
         float s;
-        if ((b.x - a.x) != 0)           /*if not vertical line*/
+        if ((b.x - a.x) != 0)           // if not vertical line
             s = (X.x - a.x) / (b.x - a.x);
         else
             s = (X.y - a.y) / (b.y - a.y);
 
-        /*in bounds?*/
+        // in bounds?
         if (s >= 0.f && s <= 1.f)
         {
             // X is intersection point
@@ -311,7 +314,7 @@ void copyTransformDrawList(ImDrawList *targetDrawList, ImDrawList const*sourceDr
 
     // Currently not supporting very large graphs with more than 64k indices. If this check
     // fails for your use case, you can try to configure ImDrawIdx to be uint in imconfig.h
-    IM_ASSERT(sourceDrawList->VtxBuffer.size() < std::numeric_limits<ImDrawIdx>::max());
+    IM_ASSERT((size_t)sourceDrawList->VtxBuffer.size() < std::numeric_limits<ImDrawIdx>::max());
 
     targetDrawList->PrimReserve(0, sourceDrawList->VtxBuffer.size());
 
@@ -423,12 +426,23 @@ void paintGrid(Style const &style) {
     }
 }
 
+// Invisible button which does not increase content size
 void invisibleButtonNoResize(const char *name, ImVec2 size)
 {
     ImGuiWindow* wnd = ImGui::GetCurrentWindow();
     ImVec2 maxPos = wnd->DC.CursorMaxPos;
     ImGui::InvisibleButton(name, size);
     wnd->DC.CursorMaxPos = maxPos;
+}
+
+ImVec2 getVisibleNodeRelativeOffset(Style const& style) {
+    return ImVec2(style[Style_SlotRadius], style[Style_NodeBorderSize] * 0.5f);
+}
+
+ImRect getVisibleNodeArea(Style const& style) {
+    ImVec2 visibleNodeSize = ImGui::GetWindowSize() - getVisibleNodeRelativeOffset(style) * 2;
+    ImVec2 visibleNodePos = ImGui::GetWindowPos() + getVisibleNodeRelativeOffset(style);
+    return ImRect(visibleNodePos, visibleNodePos + visibleNodeSize);
 }
 
 } // anonymous namespace
@@ -482,7 +496,7 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
         if (state.lowerBound.x != std::numeric_limits<float>::max()) {
             ImVec2 extent = state.upperBound - state.lowerBound;
             ImVec2 factor = ImGui::GetWindowSize() / extent;
-            state.zoom = std::max(std::min(std::min(factor.x, factor.y) * 0.95f, 1.f), 0.15f);
+            state.zoom = std::max(std::min(std::min(factor.x, factor.y) * 0.95f, 1.f), state.zoomLimits.x);
             state.innerWndPos = -state.lowerBound + (ImGui::GetWindowSize() / 2.f) / state.zoom - extent / 2.f;
             setWindowPos = true;
         } else {
@@ -535,7 +549,7 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
     if (state.outerWindowHovered && state.hoveredNode == -1 && outerIo.MouseWheel != 0.f && state.innerContext->OpenPopupStack.empty()) {
         const float factor = 1.25f;
         float newZoom = outerIo.MouseWheel > 0 ? (state.zoom * factor) : (state.zoom / factor);
-        if (newZoom > 0.15f && newZoom < 16.f) {
+        if (newZoom > state.zoomLimits.x && newZoom < state.zoomLimits.y) {
             //ImVec2 pos = ImGui::GetWindowSize() / 2.f; // zoom to window center
             ImVec2 pos = outerIo.MousePos - ImGui::GetWindowPos(); // zoom to mouse position
             state.innerWndPos = (pos * state.zoom - pos * newZoom + state.innerWndPos * newZoom * state.zoom) / (newZoom * state.zoom);
@@ -658,7 +672,7 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
 
             ImGuiIO const& io = ImGui::GetIO();
             // from imgui.cpp
-            const bool is_ctrl_key_only = (io.KeyMods == ImGuiKeyModFlags_Ctrl);
+            const bool is_ctrl_key_only = (io.KeyMods == ImGuiMod_Ctrl);
 
             if (is_ctrl_key_only) {
                 if (ImGui::IsKeyPressed(ImGuiKey_X)) {
@@ -679,7 +693,9 @@ void NodeArea::BeginNodeArea(std::function<void(UserAction)> actionCallback, Nod
                 actionCallback(UserAction::Delete);
             }
         }
-    } else /*if (!state.outerWindowFocused) */ {
+    }
+    else //if (!state.outerWindowFocused)
+    {
         if (state.mode == Mode::Selecting) {
             // cancel selection - another component is active.
             state.mode = Mode::None;
@@ -785,6 +801,9 @@ void NodeArea::EndNodeArea() {
 
     if (state.outerWindowHovered) {
         state.outerContext->MouseCursor = state.innerContext->MouseCursor;
+        if (state.innerContext->WantTextInputNextFrame != -1) {
+            state.outerContext->WantTextInputNextFrame = state.innerContext->WantTextInputNextFrame;
+        }
     }
 
     // ImGui snaps geometry to whole pixels. This leads to jaggy movement when zooming in.
@@ -832,25 +851,26 @@ bool NodeArea::BeginNode(NodeState &node, bool resizeable) {
 #else
     sprintf(buf, "##node%d", node.id);
 #endif
+    node.sizeConstraintMin = state.innerContext->NextWindowData.SizeConstraintRect.Min;
+    node.sizeConstraintMax = state.innerContext->NextWindowData.SizeConstraintRect.Max;
 
     ImGui::SetNextWindowPos(state.innerWndPos + node.pos);
 
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style[Style_NodePadding] + style[Style_SlotRadius]);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style[Style_NodePadding] + ImVec2(style[Style_SlotRadius], 0));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
 
     if (oldSkip && !node.skip) {
-        ImGui::SetNextWindowSize(node.size + style[Style_SlotRadius] * 2.f);
+        ImGui::SetNextWindowSize(node.size);
     }
 
-    // Overriding the DisplaySize is a workaround to keep ImGui::CalcSizeAutoFit
+    // Overriding the WorkSize is a workaround to keep ImGui::CalcWindowAutoFitSize
     // from downsizing our nodes if they do not fit our "virtual screen".
-    ImVec2 oldDisplaySize = state.innerContext->IO.DisplaySize;
-    state.innerContext->IO.DisplaySize = ImVec2(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+    ImVec2 oldWorkSize = ImGui::GetMainViewport()->WorkSize;
+    ImGui::GetMainViewport()->WorkSize = ImVec2(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 
     int wndFlags =
         ImGuiWindowFlags_AlwaysAutoResize |
-        // ImGuiWindowFlags_ShowBorders |
         ImGuiWindowFlags_NoResize |
         ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoTitleBar |
@@ -862,8 +882,10 @@ bool NodeArea::BeginNode(NodeState &node, bool resizeable) {
     // put nodes into a separate "child" window so we can paint them on top of edges
     ImGui::Begin(buf, nullptr, wndFlags);
 
-    // restore DisplaySize
-    state.innerContext->IO.DisplaySize = oldDisplaySize;
+    // restore WorkSize
+    ImGui::GetMainViewport()->WorkSize = oldWorkSize;
+
+    ImRect visibleArea = getVisibleNodeArea(style);
 
     ImGui::PushID(&node);
 
@@ -871,37 +893,47 @@ bool NodeArea::BeginNode(NodeState &node, bool resizeable) {
         return false;
     }
     node.forceRedraw = false;
-
-
     node.inputSlots.resize(0);
     node.outputSlots.resize(0);
 
     bool hovered = state.hoveredNode == node.id;
     bool selected = state.selectedNodes.isSelected(node.id);
-    bool wouldSelect = handleNodeDragSelection(*this, node.id, ImRect(node.pos, node.pos + node.size));
+    ImRect selectionRect(visibleArea.Min, visibleArea.Max);
+    selectionRect.Translate(-state.innerWndPos);
+    bool wouldSelect = handleNodeDragSelection(*this, node.id, selectionRect);
 
     ImU32 nodeBg = hovered ? style[Style_NodeFillHovered] : style[Style_NodeFill];
     ImU32 nodeBorder = (selected || wouldSelect) ? style[Style_NodeBorderSelected] : style[Style_NodeBorder];
 
-    ImVec2 offset = ImGui::GetWindowPos() + style[Style_SlotRadius];
-
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    draw_list->PushClipRect(state.innerWndPos + node.pos, state.innerWndPos + node.pos + ImGui::GetWindowSize());
 
-    if (resizeable)
-    {
+    // Draw the node outlines inside the imgui window
+    draw_list->AddRectFilled(visibleArea.Min, visibleArea.Max, nodeBg, style[Style_NodeRounding]);
+    draw_list->AddRect(visibleArea.Min, visibleArea.Max, nodeBorder, style[Style_NodeRounding], ImDrawFlags_RoundCornersAll, style[Style_NodeBorderSize]);
+
+    if (resizeable) {
         const float window_rounding = style[Style_NodeRounding];
         const float resize_corner_size = ImMax(state.innerContext->FontSize * 1.35f, window_rounding + 1.0f + state.innerContext->FontSize * 0.2f);
-        const ImVec2 br = offset + node.size;
+        const ImVec2 br = visibleArea.Max;
         bool resizeHovered, resizeHeld;
 
         const ImRect resize_rect(br - ImFloor(ImVec2(resize_corner_size * 0.75f, resize_corner_size * 0.75f)), br);
         const ImGuiID resize_id = ImGui::GetID(&node);
-        ImGui::ButtonBehavior(resize_rect, resize_id, &resizeHovered, &resizeHeld, ImGuiButtonFlags_FlattenChildren);
+        ImGui::ButtonBehavior(resize_rect, resize_id, &resizeHovered, &resizeHeld, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_AllowItemOverlap);
         ImU32 resize_col = ImGui::GetColorU32(resizeHeld ? ImGuiCol_ResizeGripActive : resizeHovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
 
         if (resizeHeld && (state.mode == Mode::None || state.mode == Mode::ResizingNode)) {
             state.mode = Mode::ResizingNode;
             node.size += ImGui::GetIO().MouseDelta;
+
+            ImRect cr(node.sizeConstraintMin, node.sizeConstraintMax);
+            if (cr.Min.x > 0) node.size.x = ImMax(node.size.x, cr.Min.x);
+            if (cr.Max.x > 0) node.size.x = ImMin(node.size.x, cr.Max.x);
+            if (cr.Min.y > 0) node.size.y = ImMax(node.size.y, cr.Min.y);
+            if (cr.Max.y > 0) node.size.y = ImMin(node.size.y, cr.Max.y);
+
+            ImGui::SetActiveID(resize_id, nullptr);
         } else if (!resizeHeld && state.mode == Mode::ResizingNode) {
             state.mode = Mode::None;
         }
@@ -912,14 +944,9 @@ bool NodeArea::BeginNode(NodeState &node, bool resizeable) {
         draw_list->PathFillConvex(resize_col);
     }
 
-    draw_list->PushClipRect(state.innerWndPos + node.pos, state.innerWndPos + node.pos + ImGui::GetWindowSize());
-
-    draw_list->AddRectFilled(offset, offset + node.size, nodeBg, style[Style_NodeRounding]);
-    draw_list->AddRect(offset, offset + node.size, nodeBorder, style[Style_NodeRounding], ImDrawFlags_RoundCornersAll, style[Style_NodeBorderSize]);
-
     draw_list->PopClipRect();
 
-    ImGui::SetCursorPos(ImVec2(0.f, 0.f) + style[Style_SlotRadius] + style[Style_NodePadding]);
+    ImGui::SetCursorPos(style[Style_NodePadding] + ImVec2(style[Style_SlotRadius], 0));
 
     ImGui::BeginGroup(); // Lock horizontal position
 
@@ -936,27 +963,38 @@ void NodeArea::EndNode(NodeState &node) {
 #ifdef IMGUI_NODES_DEBUG
         debug << "EndNode " << node.id << " " << ImGui::IsAnyItemActive() << std::endl;
 #endif
+        ImRect visibleArea = getVisibleNodeArea(style);
+        ImVec2 visibleOffset = getVisibleNodeRelativeOffset(style);
 
         ImGui::EndGroup();
 
         if (state.mode != Mode::ResizingNode) {
-            ImVec2 newSize = ImGui::GetWindowSize() - style[Style_SlotRadius] * 2.f;
+            ImVec2 newSize = ImGui::GetCurrentWindowRead()->ContentSizeIdeal + ImVec2(style[Style_SlotRadius] * 2, 0) + style[Style_NodePadding] * 2;
+
+            // The dampening on the size adaptation fixes possible feedback loops
+            // with automatically resizing UI controls and automatically resizing nodes.
+            // Factors closer to one show the jittering longer but the sizes of other nodes
+            // converge faster. Factors closer to zero fix the jittering faster, but with lower
+            // values one can see the nodes grow or shrink slowly.
+            const float sizeAdaptationDampening = 0.75f;
+            newSize = node.size + (newSize - node.size) * sizeAdaptationDampening;
+
+            ImRect cr(node.sizeConstraintMin, node.sizeConstraintMax);
+            if (cr.Min.x > 0.f) newSize.x = ImMax(newSize.x, cr.Min.x);
+            if (cr.Min.y > 0.f) newSize.y = ImMax(newSize.y, cr.Min.y);
+            if (cr.Max.x > 0.f) newSize.x = ImMin(newSize.x, cr.Max.x);
+            if (cr.Max.y > 0.f) newSize.y = ImMin(newSize.y, cr.Max.y);
+
             if (newSize != node.size) {
-                // The dampening on the size adaptation fixes possible feedback loops
-                // with automatically resizing UI controls and automatically resizing nodes.
-                // Factors closer to one show the jittering longer but the sizes of other nodes
-                // converge faster. Factors closer to zero fix the jittering faster, but with lower
-                // values one can see the nodes grow or shrink slowly.
-                const float sizeAdaptationDampening = 0.75f;
-                node.size += (newSize - node.size) * sizeAdaptationDampening;
+                node.size = newSize;
 
                 node.forceRedraw = true;
                 state.anySizeChanged = true;
             }
         }
 
-        ImGui::SetCursorPos(ImVec2() + style[Style_SlotRadius]);
-        invisibleButtonNoResize("node", node.size);
+        ImGui::SetCursorPos(visibleOffset);
+        invisibleButtonNoResize("node", visibleArea.GetSize());
         bool itemActive = state.outerWindowFocused && ImGui::IsItemActive();
         bool itemWasActive = state.outerWindowFocused && WasItemActive();
 #ifdef IMGUI_NODES_DEBUG
@@ -1022,31 +1060,38 @@ void NodeArea::EndNode(NodeState &node) {
 }
 
 void NodeArea::BeginSlot(NodeState &node) {
-    ImVec2 offset = ImGui::GetWindowPos();
+    ImRect visibleArea = getVisibleNodeArea(style);
+    ImVec2 visibleOffset = getVisibleNodeRelativeOffset(style);
+
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     draw_list->PushClipRect(state.innerWndPos + node.pos, state.innerWndPos + node.pos + ImGui::GetWindowSize());
     node.lastCursor = ImGui::GetCursorPos();
-    ImVec2 pos = ImVec2(style[Style_SlotRadius], node.lastCursor.y);
+    ImVec2 pos = ImGui::GetWindowPos() + ImVec2(visibleOffset.x, node.lastCursor.y);
     draw_list->AddLine(
-        offset + pos + ImVec2(style[Style_NodeBorderSize] * 0.5f, 0.f),
-        offset + pos + ImVec2(node.size.x - style[Style_NodeBorderSize], 0),
+        pos + ImVec2(0.5f, 0),
+        pos + ImVec2(visibleArea.GetSize().x - 1, 0),
         style[Style_SlotSeparatorColor], style[Style_SlotSeparatorSize]);
     draw_list->PopClipRect();
     ImGui::Spacing();
 }
 
 void NodeArea::EndSlot(NodeState &node, int inputType, int outputType) {
+    ImVec2 visibleOffset = getVisibleNodeRelativeOffset(style);
+    ImRect visibleArea = getVisibleNodeArea(style);
+
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     draw_list->PushClipRect(state.innerWndPos + node.pos, state.innerWndPos + node.pos + ImGui::GetWindowSize());
 
-    ImVec2 relativeInputPos = ImVec2(style[Style_SlotRadius], node.lastCursor.y + (ImGui::GetCursorPos().y - node.lastCursor.y) / 2.f);
-    ImVec2 relativeOutputPos = relativeInputPos + ImVec2(node.size.x, 0);
+    // relative to visible area
+    float relativeYoffset = node.lastCursor.y + (ImGui::GetCursorPos().y - node.lastCursor.y) / 2.f;
+    ImVec2 relativeInputPos  = ImVec2(0.5f, relativeYoffset);
+    ImVec2 relativeOutputPos = ImVec2(visibleArea.GetSize().x - 0.5f, relativeYoffset);
 
-    ImVec2 absoluteInputPos = relativeInputPos + node.pos;
-    ImVec2 absoluteOutputPos = relativeOutputPos + node.pos;
+    ImVec2 absoluteInputPos = relativeInputPos + node.pos + visibleOffset;
+    ImVec2 absoluteOutputPos = relativeOutputPos + node.pos + visibleOffset;
 
-    ImVec2 slotBoundsMin = ImVec2(style[Style_SlotRadius], node.lastCursor.y);
-    ImVec2 slotBoundsMax = ImVec2(slotBoundsMin.x + node.size.x, ImGui::GetCursorPos().y);
+    ImVec2 slotBoundsMin = ImVec2(visibleOffset.x, node.lastCursor.y) + style[Style_SlotSeparatorSize];
+    ImVec2 slotBoundsMax = ImVec2(visibleOffset.x + visibleArea.GetSize().x, ImGui::GetCursorPos().y) - ImVec2(style[Style_SlotSeparatorSize], 0);
     ImVec2 offset = ImGui::GetWindowPos();
 
     auto paintEdgeDock = [&](ImVec2 pos, ImColor col, bool input, int slotIdx, ImVec2 dragPos) {
@@ -1055,20 +1100,27 @@ void NodeArea::EndSlot(NodeState &node, int inputType, int outputType) {
             << " edge " << (input ? "input " : "output ") << slotIdx << " pos: "
             << pos.x << ", " << pos.y << std::endl;
 #endif
-        draw_list->AddCircleFilled(offset + pos, style[Style_SlotRadius], col);
+        draw_list->AddCircleFilled(visibleArea.Min + pos, style[Style_SlotRadius], col);
 
-        bool hovered =
-            state.outerWindowFocused &&
-            ImLengthSqr(offset + pos - ImGui::GetMousePos()) <= style[Style_SlotMouseRadius] * style[Style_SlotMouseRadius];
+        bool hovered = state.outerWindowFocused;
+
+        // Is circle dot hovered?
+        hovered = hovered &&
+            ImLengthSqr(visibleArea.Min + pos - ImVec2(0.5f, 0.5f) - ImGui::GetMousePos()) <= style[Style_SlotMouseRadius] * style[Style_SlotMouseRadius];
 
         bool anotherItemIsActive = false;
         if (style.newEdgeFromSlot) {
             anotherItemIsActive = ImGui::IsAnyItemActive();
+
             ImVec2 oldCursor = ImGui::GetCursorPos();
+            bool oldIsSetPos = ImGui::GetCurrentWindow()->DC.IsSetPos;
+            ImVec2 oldMaxPos = ImGui::GetCurrentWindow()->DC.CursorMaxPos;
             ImGui::SetCursorPos(slotBoundsMin);
             invisibleButtonNoResize("slot", slotBoundsMax - slotBoundsMin);
             ImGui::SetCursorPos(oldCursor);
+            ImGui::GetCurrentWindow()->DC.IsSetPos = oldIsSetPos;
 
+            // is slot hovered?
             hovered = hovered
                 || ImGui::IsItemHovered()
                 || ImRect(slotBoundsMin, slotBoundsMax).Contains(ImGui::GetMousePos() - offset);
@@ -1096,7 +1148,7 @@ void NodeArea::EndSlot(NodeState &node, int inputType, int outputType) {
             }
 
             if (state.mode == Mode::None || validTarget) {
-                draw_list->AddCircle(offset + pos, style[Style_SlotRadius], style[Style_SlotBorderHovered]);
+                draw_list->AddCircle(visibleArea.Min + pos, style[Style_SlotRadius], style[Style_SlotBorderHovered]);
                 if (style.newEdgeFromSlot) {
                     draw_list->AddRect(offset + slotBoundsMin, offset + slotBoundsMax, style[Style_SlotBorderHovered]);
                 }
@@ -1189,7 +1241,7 @@ ImVec2 NodeArea::GetAbsoluteMousePos() const
 
 ImVec2 NodeArea::GetContentSize(NodeState &node) const
 {
-    return node.size - style[Style_SlotRadius];
+    return node.size - (ImVec2(style[Style_SlotRadius], 0.f) + style[Style_NodePadding]) * 2.f;
 }
 
 ImVec2 NodeArea::ConvertToNodeAreaPosition(ImVec2 outsidePosition) const

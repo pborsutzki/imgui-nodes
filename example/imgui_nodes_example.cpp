@@ -330,6 +330,7 @@ struct CodeNode : public BaseNode<CodeNode> {
 
     void draw(nodes::NodeArea &area) {
         if (area.BeginNode(state, true)) {
+            ImVec2 originPos = ImGui::GetCursorPos();
             ImGui::Text("%s (%d)", name, state.id);
 
             area.BeginSlot(state);
@@ -338,7 +339,7 @@ struct CodeNode : public BaseNode<CodeNode> {
 
             area.BeginSlot(state);
             ImGui::Text("Code");
-            ImVec2 size = area.GetContentSize(state) - ImGui::GetCursorPos();
+            ImVec2 size = area.GetContentSize(state) - (ImGui::GetCursorPos() - originPos);
             size = ImVec2(std::max(size.x, 100.f), std::max(size.y, 100.f));
             ImGui::InputTextMultiline("##source", code, IM_ARRAYSIZE(code), size, ImGuiInputTextFlags_AllowTabInput);
             area.EndSlot(state);
@@ -356,6 +357,7 @@ struct Recursion : public BaseNode<Recursion> {
 
     void draw(nodes::NodeArea &area) {
         if (area.BeginNode(state, true)) {
+            ImVec2 originPos = ImGui::GetCursorPos();
             ImGui::Text("%s (%d)", name, state.id);
 
             area.BeginSlot(state);
@@ -373,7 +375,7 @@ struct Recursion : public BaseNode<Recursion> {
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImU32(ImColor(60, 60, 70, 200)));
             ImGui::PushID(this);
-            ImVec2 size = area.GetContentSize(state) - ImGui::GetCursorPos();
+            ImVec2 size = area.GetContentSize(state) - (ImGui::GetCursorPos() - originPos);
             size = ImVec2(std::max(size.x, 100.f), std::max(size.y, 100.f));
             ImGui::BeginChild("border2", size, true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
             innerGraph.draw(false);
