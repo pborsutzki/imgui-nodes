@@ -105,9 +105,9 @@ enum StyleDataType : uint32_t {
 };
 
 struct StyleMod {
-    StyleMod(StyleFloat idx, float f)          : maskedStyleIndex(idx | StyleDataType_Float), f(f) {}
-    StyleMod(StyleVec2  idx, ImVec2 const &v)  : maskedStyleIndex(idx | StyleDataType_Vec2), vec2(v) {}
-    StyleMod(StyleColor idx, ImColor const &c) : maskedStyleIndex(idx | StyleDataType_Color), color(c) {}
+    StyleMod(StyleFloat idx, float f)          : maskedStyleIndex(uint32_t(idx) | uint32_t(StyleDataType_Float)), f(f) {}
+    StyleMod(StyleVec2  idx, ImVec2 const &v)  : maskedStyleIndex(uint32_t(idx) | uint32_t(StyleDataType_Vec2)), vec2(v) {}
+    StyleMod(StyleColor idx, ImColor const &c) : maskedStyleIndex(uint32_t(idx) | uint32_t(StyleDataType_Color)), color(c) {}
 
     StyleDataType type() const { return (StyleDataType)(maskedStyleIndex & StyleDataType_Mask_); }
     uint32_t index() const { return maskedStyleIndex & ~StyleDataType_Mask_; }

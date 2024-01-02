@@ -920,7 +920,7 @@ bool NodeArea::BeginNode(NodeState &node, bool resizeable) {
 
         const ImRect resize_rect(br - ImFloor(ImVec2(resize_corner_size * 0.75f, resize_corner_size * 0.75f)), br);
         const ImGuiID resize_id = ImGui::GetID(&node);
-        ImGui::ButtonBehavior(resize_rect, resize_id, &resizeHovered, &resizeHeld, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_AllowItemOverlap);
+        ImGui::ButtonBehavior(resize_rect, resize_id, &resizeHovered, &resizeHeld, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_AllowOverlap);
         ImU32 resize_col = ImGui::GetColorU32(resizeHeld ? ImGuiCol_ResizeGripActive : resizeHovered ? ImGuiCol_ResizeGripHovered : ImGuiCol_ResizeGrip);
 
         if (resizeHeld && (state.mode == Mode::None || state.mode == Mode::ResizingNode)) {
